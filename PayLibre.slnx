@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PayLibre.Api/PayLibre.Api.csproj" />
+    <Project Path="src/PayLibre.Application/PayLibre.Application.csproj" />
+    <Project Path="src/PayLibre.Domain/PayLibre.Domain.csproj" />
+    <Project Path="src/PayLibre.Infrastructure/PayLibre.Infrastructure.csproj" />
+  </Folder>
+</Solution>
