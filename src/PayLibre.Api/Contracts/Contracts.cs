@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations;
 namespace PayLibre.Api.Contracts;
 
 // ---- Auth & school ----
+/// <summary>Register a school + its owner. <c>SettlementBankName</c>/<c>SettlementBankCode</c> come from
+/// <c>GET /api/v1/banks</c>; the account name is resolved by the provider. Sets the session cookies.</summary>
 public sealed record RegisterSchoolRequest(
     [Required, StringLength(200, MinimumLength = 2)] string SchoolName,
     [Required, EmailAddress] string OfficialEmail,
@@ -30,6 +32,8 @@ public sealed record ClassRequest(
 public sealed record ClassResponse(Guid Id, string Name, string Session);
 
 // ---- Students ----
+/// <summary>Create/update a student. <c>ClassId</c> is from <c>GET /api/v1/classes</c>; <c>Session</c> is
+/// optional and defaults to the class's session. Creating a student auto-provisions its virtual account.</summary>
 public sealed record CreateStudentRequest(
     [Required, StringLength(64, MinimumLength = 1)] string AdmissionNo,
     [Required, StringLength(200, MinimumLength = 1)] string FullName,

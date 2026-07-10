@@ -112,10 +112,38 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOIN
 }
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options => options.SwaggerDoc("v1", new OpenApiInfo
+builder.Services.AddSwaggerGen(options =>
 {
-    Title = "PayLibre API", Version = "v1", Description = "PayLibre backend API."
-}));
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "PayLibre API",
+        Version = "v1",
+        Description = """
+            PayLibre backend — school fee collection.
+
+            ## Auth (dashboard plane)
+            `POST /api/v1/auth/register` and `POST /api/v1/auth/login` set the session as **HttpOnly, Secure
+            cookies** (`plb_access` + `plb_refresh`) — tokens are never returned in the body. Every other
+            endpoint requires the session cookie, so browser clients must send **`credentials: "include"`**
+            on every request (the API allows the configured frontend + `http://localhost:3000` origins with
+            credentials). On a `401`, call `POST /api/v1/auth/refresh` to rotate the session; `POST
+            /api/v1/auth/logout` clears it. `GET /api/v1/auth/me` returns the current user + school.
+            `GET /api/v1/banks` is public (for the settlement-bank dropdown on registration).
+
+            ## Errors
+            JSON `{ "error": "message" }` with the matching status: `400` validation, `401` unauthenticated,
+            `404` not found, `409` conflict (e.g. duplicate), `502` upstream (Xental) failure.
+
+            ## Typical flow
+            register → create classes → add students (each **auto-provisions a dedicated virtual account**)
+            or bulk-import via `POST /api/v1/students/import` (multipart CSV). A student's account card is at
+            `GET /api/v1/students/{id}/virtual-account`.
+            """,
+    });
+    var xml = Path.Combine(AppContext.BaseDirectory, "PayLibre.Api.xml");
+    if (File.Exists(xml)) options.IncludeXmlComments(xml, includeControllerXmlComments: true);
+    options.SupportNonNullableReferenceTypes();
+});
 
 var app = builder.Build();
 app.UseSerilogRequestLogging();
