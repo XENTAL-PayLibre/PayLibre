@@ -13,7 +13,7 @@ namespace PayLibre.Tests;
 public class AuthServiceTests
 {
     private static AuthService Auth(PayLibreDbContext ctx, TestDb db, PayLibre.Application.Common.Interfaces.IXentalClient xental) =>
-        new(ctx, new FakePasswordHasher(), new FakeTokenService(), xental, db.Clock, Options.Create(new PayLibreOptions()));
+        new(ctx, new FakePasswordHasher(), new FakeTokenService(), xental, new FakeNotificationSender(), db.Clock, Options.Create(new PayLibreOptions()));
 
     private static RegisterSchoolInput Reg(string email = "owner@acme.edu") =>
         new("Acme Academy", email, "08012345678", "Test Bank", "999", "0123456789", "password1");
@@ -106,6 +106,50 @@ public class AuthServiceTests
             var reuse = () => Auth(ctx, db, new FakeXentalClient()).RefreshAsync(login.RefreshToken);
             await reuse.Should().ThrowAsync<AuthenticationException>();
         }
+    }
+
+    private static AuthService AuthWith(PayLibreDbContext ctx, TestDb db, FakeNotificationSender notifier) =>
+        new(ctx, new FakePasswordHasher(), new FakeTokenService(), new FakeXentalClient(), notifier, db.Clock, Options.Create(new PayLibreOptions()));
+
+    [Fact]
+    public async Task Login_returns_a_bearer_access_token()
+    {
+        using var db = new TestDb();
+        IssuedSession session;
+        await using (var ctx = db.CreateContext()) session = await Auth(ctx, db, new FakeXentalClient()).RegisterAsync(Reg());
+        session.Access.Token.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Forgot_then_reset_password_lets_the_user_log_in_with_the_new_password()
+    {
+        using var db = new TestDb();
+        var notifier = new FakeNotificationSender();
+        await using (var ctx = db.CreateContext()) await Auth(ctx, db, new FakeXentalClient()).RegisterAsync(Reg());
+
+        await using (var ctx = db.CreateContext()) await AuthWith(ctx, db, notifier).ForgotPasswordAsync("owner@acme.edu");
+        notifier.PasswordResets.Should().Be(1);
+        var token = notifier.LastResetUrl!.Split("token=")[1];
+
+        await using (var ctx = db.CreateContext()) await AuthWith(ctx, db, notifier).ResetPasswordAsync(token, "newpassword1");
+
+        await using (var ctx = db.CreateContext())
+            (await Auth(ctx, db, new FakeXentalClient()).LoginAsync("owner@acme.edu", "newpassword1")).User.Email.Should().Be("owner@acme.edu");
+        await using (var ctx = db.CreateContext())
+        {
+            var oldPw = () => Auth(ctx, db, new FakeXentalClient()).LoginAsync("owner@acme.edu", "password1");
+            await oldPw.Should().ThrowAsync<AuthenticationException>();
+        }
+    }
+
+    [Fact]
+    public async Task Forgot_password_is_silent_for_an_unknown_email()
+    {
+        using var db = new TestDb();
+        var notifier = new FakeNotificationSender();
+        await using var ctx = db.CreateContext();
+        await AuthWith(ctx, db, notifier).ForgotPasswordAsync("nobody@x.com"); // no throw
+        notifier.PasswordResets.Should().Be(0);
     }
 
     /// <summary>A Xental client whose sub-merchant creation always fails, to test rollback.</summary>

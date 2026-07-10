@@ -29,6 +29,8 @@ public sealed class FakeTokenService : ITokenService
 {
     public AccessToken IssueAccessToken(SchoolUser user) =>
         new($"token-{user.Id:N}", DateTimeOffset.UtcNow.AddMinutes(15));
+    public AccessToken IssueParentToken(PayLibre.Domain.Parents.Parent parent) =>
+        new($"ptoken-{parent.Id:N}", DateTimeOffset.UtcNow.AddMinutes(60));
 }
 
 /// <summary>In-memory stand-in for Xental. Records calls and returns deterministic NUBANs/sub-merchants.</summary>
@@ -71,8 +73,12 @@ public sealed class FakeXentalClient : IXentalClient
 public sealed class FakeNotificationSender : INotificationSender
 {
     public int Sent { get; private set; }
+    public int PasswordResets { get; private set; }
+    public string? LastResetUrl { get; private set; }
     public Task SendVirtualAccountDetailsAsync(string toName, string? email, string? phone, string studentName, string nuban, string bankName, string accountName, CancellationToken ct = default)
     { Sent++; return Task.CompletedTask; }
+    public Task SendPasswordResetAsync(string toEmail, string resetUrl, CancellationToken ct = default)
+    { PasswordResets++; LastResetUrl = resetUrl; return Task.CompletedTask; }
 }
 
 /// <summary>SQLite in-memory database shared across contexts for one test.</summary>

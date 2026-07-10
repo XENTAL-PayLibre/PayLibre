@@ -79,6 +79,9 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Dashboard)
         .RequireClaim(AuthPolicies.RoleClaim, "Owner", "Admin"));
+    options.AddPolicy(AuthPolicies.Parent, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Parent));
 });
 
 // Rate limiting: per-IP fixed windows.
@@ -91,6 +94,7 @@ builder.Services.AddRateLimiter(options =>
             _ => new FixedWindowRateLimiterOptions { PermitLimit = permit, Window = TimeSpan.FromMinutes(1) });
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx => Window(ctx, 300));
     options.AddPolicy("auth", ctx => Window(ctx, 10));
+    options.AddPolicy("webhook", ctx => Window(ctx, 600)); // Xental deposit events
 });
 
 // CORS — allow the configured frontend origin(s) to send the HttpOnly session cookies.

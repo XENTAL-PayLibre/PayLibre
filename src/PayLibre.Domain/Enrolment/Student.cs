@@ -25,6 +25,9 @@ public sealed class Student : BaseEntity, ITenantOwned
 
     public StudentStatus Status { get; private set; }
 
+    /// <summary>True when a parent self-enrolled the student via the school's join code.</summary>
+    public bool SelfEnrolled { get; private set; }
+
     // Cached Xental dedicated-virtual-account details (source of truth is Xental).
     public string? XentalAccountRef { get; private set; }   // what we send to Xental as accountRef
     public string? Nuban { get; private set; }
@@ -36,8 +39,9 @@ public sealed class Student : BaseEntity, ITenantOwned
     private Student() { }
 
     public Student(Guid schoolId, string admissionNo, string fullName, Guid classId, string session,
-        string guardianName, string? guardianPhone, string? guardianEmail)
+        string guardianName, string? guardianPhone, string? guardianEmail, bool selfEnrolled = false)
     {
+        SelfEnrolled = selfEnrolled;
         SchoolId = schoolId;
         AdmissionNo = DomainException.Require(admissionNo, nameof(admissionNo));
         FullName = DomainException.Require(fullName, nameof(fullName));

@@ -21,6 +21,7 @@ public sealed class StudentsController(StudentService students) : ControllerBase
         [FromQuery] Guid? classId, [FromQuery] StudentStatus? status, CancellationToken ct) =>
         Ok((await students.ListAsync(classId, status, ct)).Select(ToResponse));
 
+    /// <summary>Get a student by id, including cached virtual-account details.</summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(StudentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -38,6 +39,7 @@ public sealed class StudentsController(StudentService students) : ControllerBase
         return Created($"/api/v1/students/{s.Id}", ToResponse(s));
     }
 
+    /// <summary>Update a student's details (name, class, guardian). Does not re-provision the account.</summary>
     [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(StudentResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<StudentResponse>> Update(Guid id, CreateStudentRequest request, CancellationToken ct) =>
@@ -45,6 +47,7 @@ public sealed class StudentsController(StudentService students) : ControllerBase
             request.AdmissionNo, request.FullName, request.ClassId, request.Session,
             request.GuardianName, request.GuardianPhone, request.GuardianEmail), ct)));
 
+    /// <summary>Delete a student.</summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)

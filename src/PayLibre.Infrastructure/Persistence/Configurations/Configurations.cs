@@ -22,6 +22,8 @@ public sealed class SchoolConfiguration : IEntityTypeConfiguration<School>
         b.Property(x => x.SettlementAccountNumber).HasMaxLength(20).IsRequired();
         b.Property(x => x.SettlementAccountName).HasMaxLength(200);
         b.Property(x => x.XentalSubMerchantRef).HasMaxLength(100);
+        b.Property(x => x.JoinCode).HasMaxLength(16);
+        b.HasIndex(x => x.JoinCode).IsUnique();
     }
 }
 
@@ -41,11 +43,39 @@ public sealed class SchoolUserConfiguration : IEntityTypeConfiguration<SchoolUse
     }
 }
 
+public sealed class ParentConfiguration : IEntityTypeConfiguration<PayLibre.Domain.Parents.Parent>
+{
+    public void Configure(EntityTypeBuilder<PayLibre.Domain.Parents.Parent> b)
+    {
+        b.ToTable("parents");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Email).HasMaxLength(320).IsRequired();
+        b.HasIndex(x => x.Email).IsUnique();
+        b.Property(x => x.PasswordHash).HasMaxLength(200).IsRequired();
+        b.Property(x => x.FullName).HasMaxLength(200);
+        b.Property(x => x.Phone).HasMaxLength(40);
+    }
+}
+
 public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
 {
     public void Configure(EntityTypeBuilder<RefreshToken> b)
     {
         b.ToTable("refresh_tokens");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+        b.HasIndex(x => x.TokenHash).IsUnique();
+        b.Property(x => x.ExpiresAtUtc).IsRequired();
+        b.HasIndex(x => x.SchoolUserId);
+        b.HasOne<School>().WithMany().HasForeignKey(x => x.SchoolId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class PasswordResetTokenConfiguration : IEntityTypeConfiguration<PasswordResetToken>
+{
+    public void Configure(EntityTypeBuilder<PasswordResetToken> b)
+    {
+        b.ToTable("password_reset_tokens");
         b.HasKey(x => x.Id);
         b.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
         b.HasIndex(x => x.TokenHash).IsUnique();

@@ -19,7 +19,7 @@ public class TenantIsolationTests
         async Task<Guid> Register(string email)
         {
             await using var ctx = db.CreateContext();
-            var auth = new AuthService(ctx, new FakePasswordHasher(), new FakeTokenService(), xental, db.Clock, opts);
+            var auth = new AuthService(ctx, new FakePasswordHasher(), new FakeTokenService(), xental, new FakeNotificationSender(), db.Clock, opts);
             var s = await auth.RegisterAsync(new RegisterSchoolInput("School", email, "0800", "Bank", "999", "0123456789", "password1"));
             return s.School.Id;
         }

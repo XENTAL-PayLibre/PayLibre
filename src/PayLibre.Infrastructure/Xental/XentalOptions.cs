@@ -14,5 +14,10 @@ public sealed class XentalOptions
     /// <summary>Client secret of that key (shown once). Supplied via secret/env.</summary>
     public string ClientSecret { get; set; } = string.Empty;
 
+    /// <summary>Signing secret of PayLibre's Xental webhook endpoint (HMAC-SHA256, header
+    /// <c>x-xental-signature</c>). Obtained when the endpoint is registered; verifies inbound events.
+    /// When empty, signature verification is skipped (log-only) — set it in real environments.</summary>
+    public string WebhookSecret { get; set; } = string.Empty;
+
     public bool IsConfigured => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
 }

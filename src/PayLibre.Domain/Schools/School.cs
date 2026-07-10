@@ -26,6 +26,10 @@ public sealed class School : BaseEntity
     public string? XentalSubMerchantRef { get; private set; }
     public Guid? XentalSubMerchantId { get; private set; }
 
+    /// <summary>Short code parents use to self-enrol their child (no login required).</summary>
+    public string? JoinCode { get; private set; }
+    public void SetJoinCode(string code) => JoinCode = DomainException.Require(code, nameof(code)).ToUpperInvariant();
+
     private School() { }
 
     public School(string name, string officialEmail, string phone,

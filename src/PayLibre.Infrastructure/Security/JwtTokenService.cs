@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using PayLibre.Application.Common.Interfaces;
+using PayLibre.Domain.Parents;
 using PayLibre.Domain.Schools;
 
 namespace PayLibre.Infrastructure.Security;
@@ -12,21 +13,29 @@ namespace PayLibre.Infrastructure.Security;
 public sealed class JwtTokenService(IOptions<JwtOptions> options, IClock clock) : ITokenService
 {
     public const string DashboardScope = "dashboard";
+    public const string ParentScope = "parent";
     private readonly JwtOptions _options = options.Value;
 
-    public AccessToken IssueAccessToken(SchoolUser user)
+    public AccessToken IssueAccessToken(SchoolUser user) => Issue(new List<Claim>
+    {
+        new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+        new("tenant_id", user.SchoolId.ToString()),
+        new("scope", DashboardScope),
+        new("role", user.Role.ToString()),
+        new(JwtRegisteredClaimNames.Email, user.Email),
+    });
+
+    public AccessToken IssueParentToken(Parent parent) => Issue(new List<Claim>
+    {
+        new(JwtRegisteredClaimNames.Sub, parent.Id.ToString()),
+        new("scope", ParentScope),
+        new(JwtRegisteredClaimNames.Email, parent.Email),
+    });
+
+    private AccessToken Issue(List<Claim> claims)
     {
         var expiresAt = clock.UtcNow.AddSeconds(_options.AccessTokenLifetimeSeconds);
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new("tenant_id", user.SchoolId.ToString()),
-            new("scope", DashboardScope),
-            new("role", user.Role.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        };
-
+        claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,
@@ -35,7 +44,6 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, IClock clock) 
             notBefore: clock.UtcNow.UtcDateTime,
             expires: expiresAt.UtcDateTime,
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
-
         return new AccessToken(new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
     }
 }

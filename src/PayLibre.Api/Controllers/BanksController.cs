@@ -11,6 +11,7 @@ namespace PayLibre.Api.Controllers;
 [AllowAnonymous]
 public sealed class BanksController(IXentalClient xental) : ControllerBase
 {
+    /// <summary>List payout banks (name + code) for the settlement-bank dropdown at registration.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<BankResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<BankResponse>>> List(CancellationToken ct) =>

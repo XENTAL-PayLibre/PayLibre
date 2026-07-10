@@ -13,4 +13,10 @@ public sealed class PayLibreOptions
 
     /// <summary>Max rows accepted in a single student CSV import.</summary>
     public int MaxCsvRows { get; set; } = 2000;
+
+    /// <summary>Minutes a password-reset link stays valid.</summary>
+    public int PasswordResetTtlMinutes { get; set; } = 30;
+
+    /// <summary>Frontend base URL, used to build password-reset links (e.g. https://app.paylibre.xental.online).</summary>
+    public string FrontendUrl { get; set; } = "";
 }

@@ -14,6 +14,14 @@ public static class DependencyInjection
         services.AddScoped<SchoolService>();
         services.AddScoped<ClassService>();
         services.AddScoped<StudentService>();
+        services.AddScoped<SelfEnrolmentService>();
+        services.AddScoped<Fees.FeeCategoryService>();
+        services.AddScoped<Fees.FeeService>();
+        services.AddScoped<Payments.ReconciliationService>();
+        services.AddScoped<Payments.PaymentService>();
+        services.AddScoped<Dashboard.DashboardService>();
+        services.AddScoped<Parents.ParentAuthService>();
+        services.AddScoped<Parents.ParentService>();
         return services;
     }
 }

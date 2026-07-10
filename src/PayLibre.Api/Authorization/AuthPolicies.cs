@@ -11,4 +11,7 @@ public static class AuthPolicies
 
     /// <summary>Owner/Admin only (settlement + destructive settings).</summary>
     public const string ManageSchool = "manage-school";
+
+    /// <summary>Parent-app account (mobile).</summary>
+    public const string Parent = "parent";
 }

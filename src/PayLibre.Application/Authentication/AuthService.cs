@@ -27,6 +27,7 @@ public sealed class AuthService(
     IPasswordHasher hasher,
     ITokenService tokens,
     IXentalClient xental,
+    INotificationSender notifier,
     IClock clock,
     IOptions<PayLibreOptions> options)
 {
@@ -62,6 +63,11 @@ public sealed class AuthService(
             throw new UpstreamException($"Could not set up settlement with the payment provider: {ex.Message}");
         }
         school.LinkXentalSubMerchant(sub.Reference, sub.Id, sub.SettlementAccountName);
+
+        string joinCode;
+        do { joinCode = GenerateJoinCode(); }
+        while (await db.Schools.IgnoreQueryFilters().AnyAsync(s => s.JoinCode == joinCode, ct));
+        school.SetJoinCode(joinCode);
 
         db.Schools.Add(school);
         db.SchoolUsers.Add(owner);
@@ -108,6 +114,45 @@ public sealed class AuthService(
         if (token is not null) { token.Revoke(); await db.SaveChangesAsync(ct); }
     }
 
+    /// <summary>Begin a password reset: email the user a single-use reset link. Always succeeds
+    /// (no account enumeration) — callers should return 202 regardless.</summary>
+    public async Task ForgotPasswordAsync(string email, CancellationToken ct = default)
+    {
+        email = (email ?? string.Empty).Trim().ToLowerInvariant();
+        var user = await db.SchoolUsers.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == email, ct);
+        if (user is null) return; // silent — don't reveal whether the account exists
+
+        var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
+        db.PasswordResetTokens.Add(new PasswordResetToken(
+            user.SchoolId, user.Id, Sha256(raw), clock.UtcNow.AddMinutes(_options.PasswordResetTtlMinutes)));
+        await db.SaveChangesAsync(ct);
+
+        var url = $"{_options.FrontendUrl.TrimEnd('/')}/reset-password?token={raw}";
+        try { await notifier.SendPasswordResetAsync(user.Email, url, ct); } catch { /* delivery is best-effort */ }
+    }
+
+    /// <summary>Complete a password reset with the emailed token. Consumes the token and revokes all
+    /// of the user's existing sessions.</summary>
+    public async Task ResetPasswordAsync(string rawToken, string newPassword, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
+            throw new ValidationException("Password must be at least 8 characters.");
+        var token = await db.PasswordResetTokens.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.TokenHash == Sha256(rawToken ?? string.Empty), ct);
+        if (token is null || !token.IsRedeemable(clock.UtcNow))
+            throw new ValidationException("This reset link is invalid or has expired. Request a new one.");
+
+        var user = await db.SchoolUsers.IgnoreQueryFilters().FirstAsync(u => u.Id == token.SchoolUserId, ct);
+        user.SetPasswordHash(hasher.Hash(newPassword));
+        token.Consume();
+        // Invalidate any active sessions for this user.
+        var sessions = await db.RefreshTokens.IgnoreQueryFilters()
+            .Where(r => r.SchoolUserId == user.Id && !r.Revoked).ToListAsync(ct);
+        foreach (var s in sessions) s.Revoke();
+        await db.SaveChangesAsync(ct);
+    }
+
     private async Task<IssuedSession> IssueSessionAsync(SchoolUser user, School school, CancellationToken ct)
     {
         var access = tokens.IssueAccessToken(user);
@@ -121,4 +166,12 @@ public sealed class AuthService(
 
     private static string Sha256(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+
+    // Unambiguous 8-char code (no 0/O/1/I) parents type to self-enrol.
+    private static string GenerateJoinCode()
+    {
+        const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var bytes = RandomNumberGenerator.GetBytes(8);
+        return string.Concat(bytes.Select(b => alphabet[b % alphabet.Length]));
+    }
 }

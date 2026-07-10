@@ -17,7 +17,7 @@ public class EnrolmentServiceTests
     private static async Task<Guid> SeedSchoolAsync(TestDb db, FakeXentalClient xental)
     {
         await using var ctx = db.CreateContext();
-        var auth = new AuthService(ctx, new FakePasswordHasher(), new FakeTokenService(), xental, db.Clock, Opts);
+        var auth = new AuthService(ctx, new FakePasswordHasher(), new FakeTokenService(), xental, new FakeNotificationSender(), db.Clock, Opts);
         var s = await auth.RegisterAsync(new RegisterSchoolInput(
             "Acme Academy", "owner@acme.edu", "08012345678", "Test Bank", "999", "0123456789", "password1"));
         db.Tenant.TenantId = s.School.Id;
