@@ -73,6 +73,7 @@ public sealed class AuthService(
         db.SchoolUsers.Add(owner);
         var session = await IssueSessionAsync(owner, school, ct);
         await db.SaveChangesAsync(ct);
+        try { await notifier.SendWelcomeAsync(owner.Email, school.Name, ct); } catch { /* best-effort */ }
         return session;
     }
 

@@ -36,6 +36,14 @@ public sealed class NotificationSender(
         if (!string.IsNullOrWhiteSpace(phone)) await SendSmsAsync(phone!, text, ct);
     }
 
+    public async Task SendWelcomeAsync(string toEmail, string name, CancellationToken ct = default)
+    {
+        var html = $"<p>Hi {name},</p><p>Welcome to PayLibre — your account is ready. "
+            + "You can now set up classes, students and fees, and start collecting school payments.</p>";
+        logger.LogInformation("Welcome email for {Email}", toEmail);
+        await SendEmailAsync(toEmail, "Welcome to PayLibre", html, ct);
+    }
+
     public async Task SendPasswordResetAsync(string toEmail, string resetUrl, CancellationToken ct = default)
     {
         var html = $"<p>Reset your PayLibre password using the link below (valid for a short time):</p>"

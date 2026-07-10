@@ -66,4 +66,7 @@ public interface INotificationSender
 
     /// <summary>Email a school user a password-reset link.</summary>
     Task SendPasswordResetAsync(string toEmail, string resetUrl, CancellationToken ct = default);
+
+    /// <summary>Welcome a newly registered user (school owner or parent).</summary>
+    Task SendWelcomeAsync(string toEmail, string name, CancellationToken ct = default);
 }

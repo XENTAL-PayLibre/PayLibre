@@ -38,7 +38,7 @@ public class ParentServiceTests
     }
 
     private static ParentAuthService AuthSvc(TestDb db, PayLibre.Infrastructure.Persistence.PayLibreDbContext ctx) =>
-        new(ctx, new FakePasswordHasher(), new FakeTokenService());
+        new(ctx, new FakePasswordHasher(), new FakeTokenService(), new FakeNotificationSender());
 
     [Fact]
     public async Task Parent_sees_only_their_own_children_with_outstanding_and_account()

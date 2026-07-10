@@ -79,6 +79,9 @@ public sealed class FakeNotificationSender : INotificationSender
     { Sent++; return Task.CompletedTask; }
     public Task SendPasswordResetAsync(string toEmail, string resetUrl, CancellationToken ct = default)
     { PasswordResets++; LastResetUrl = resetUrl; return Task.CompletedTask; }
+    public int Welcomes { get; private set; }
+    public Task SendWelcomeAsync(string toEmail, string name, CancellationToken ct = default)
+    { Welcomes++; return Task.CompletedTask; }
 }
 
 /// <summary>SQLite in-memory database shared across contexts for one test.</summary>

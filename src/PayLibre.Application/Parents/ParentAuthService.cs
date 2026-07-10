@@ -8,7 +8,7 @@ namespace PayLibre.Application.Parents;
 public sealed record ParentSession(Parent Parent, AccessToken Access);
 
 /// <summary>Parent-app authentication. Returns a bearer access token (scope=parent) for the mobile app.</summary>
-public sealed class ParentAuthService(IApplicationDbContext db, IPasswordHasher hasher, ITokenService tokens)
+public sealed class ParentAuthService(IApplicationDbContext db, IPasswordHasher hasher, ITokenService tokens, INotificationSender notifier)
 {
     public async Task<ParentSession> RegisterAsync(string email, string password, string? fullName, string? phone, CancellationToken ct = default)
     {
@@ -22,6 +22,7 @@ public sealed class ParentAuthService(IApplicationDbContext db, IPasswordHasher 
         var parent = new Parent(email, hasher.Hash(password), fullName, phone);
         db.Parents.Add(parent);
         await db.SaveChangesAsync(ct);
+        try { await notifier.SendWelcomeAsync(parent.Email, parent.FullName ?? "there", ct); } catch { /* best-effort */ }
         return new ParentSession(parent, tokens.IssueParentToken(parent));
     }
 
