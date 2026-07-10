@@ -5,4 +5,7 @@
     <Project Path="src/PayLibre.Domain/PayLibre.Domain.csproj" />
     <Project Path="src/PayLibre.Infrastructure/PayLibre.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PayLibre.Tests/PayLibre.Tests.csproj" />
+  </Folder>
 </Solution>
