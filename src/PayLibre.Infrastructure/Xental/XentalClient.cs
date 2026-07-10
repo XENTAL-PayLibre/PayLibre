@@ -29,7 +29,7 @@ public sealed class XentalClient(HttpClient http, IOptions<XentalOptions> option
     public async Task<XentalSubMerchant> SetSubMerchantPayoutAsync(
         Guid subMerchantId, string bankName, string bankCode, string accountNumber, int platformFeeBps, CancellationToken ct = default)
     {
-        var res = await SendAsync(HttpMethod.Post, $"/api/v1/sub-merchants/{subMerchantId}/payout",
+        var res = await SendAsync(HttpMethod.Put, $"/api/v1/sub-merchants/{subMerchantId}/payout",
             new { bankName, bankCode, accountNumber, platformFeeBps }, ct);
         return ParseSubMerchant(res);
     }
