@@ -12,7 +12,18 @@ env:
   IMAGE: ghcr.io/xental-paylibre/paylibre
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test (unit + integration + end-to-end)
+        run: dotnet test tests/PayLibre.Tests/PayLibre.Tests.csproj --configuration Release
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
