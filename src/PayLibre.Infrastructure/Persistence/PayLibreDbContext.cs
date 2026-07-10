@@ -19,6 +19,7 @@ public sealed class PayLibreDbContext(
     public DbSet<SchoolUser> SchoolUsers => Set<SchoolUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<LoginOtp> LoginOtps => Set<LoginOtp>();
     public DbSet<Class> Classes => Set<Class>();
     public DbSet<Student> Students => Set<Student>();
     public DbSet<PayLibre.Domain.Fees.FeeCategory> FeeCategories => Set<PayLibre.Domain.Fees.FeeCategory>();

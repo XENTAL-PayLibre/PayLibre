@@ -38,7 +38,7 @@ public class ParentServiceTests
     }
 
     private static ParentAuthService AuthSvc(TestDb db, PayLibre.Infrastructure.Persistence.PayLibreDbContext ctx) =>
-        new(ctx, new FakePasswordHasher(), new FakeTokenService(), new FakeNotificationSender());
+        new(ctx, new FakePasswordHasher(), new FakeTokenService(), new FakeNotificationSender(), db.Clock);
 
     [Fact]
     public async Task Parent_sees_only_their_own_children_with_outstanding_and_account()
@@ -94,16 +94,24 @@ public class ParentServiceTests
     }
 
     [Fact]
-    public async Task Parent_login_requires_correct_password()
+    public async Task Parent_login_is_two_step_and_requires_correct_password()
     {
         using var db = new TestDb();
         db.Tenant.TenantId = null;
         await using (var ctx = db.CreateContext()) await AuthSvc(db, ctx).RegisterAsync("p@x.com", "password1", "P", null);
+
+        // Step 1 emails a code; step 2 verifies it → token.
+        var notifier = new FakeNotificationSender();
+        ParentAuthService Svc(PayLibre.Infrastructure.Persistence.PayLibreDbContext ctx) =>
+            new(ctx, new FakePasswordHasher(), new FakeTokenService(), notifier, db.Clock);
+        await using (var ctx = db.CreateContext()) await Svc(ctx).BeginLoginAsync("p@x.com", "password1");
+        notifier.LoginCodes.Should().Be(1);
         await using (var ctx = db.CreateContext())
-            (await AuthSvc(db, ctx).LoginAsync("p@x.com", "password1")).Access.Token.Should().NotBeNullOrEmpty();
+            (await Svc(ctx).VerifyLoginOtpAsync("p@x.com", notifier.LastLoginCode!)).Access.Token.Should().NotBeNullOrEmpty();
+
         await using (var ctx = db.CreateContext())
         {
-            var bad = () => AuthSvc(db, ctx).LoginAsync("p@x.com", "wrong");
+            var bad = () => AuthSvc(db, ctx).BeginLoginAsync("p@x.com", "wrong");
             await bad.Should().ThrowAsync<AuthenticationException>();
         }
     }

@@ -36,13 +36,25 @@ public sealed class AuthController(AuthService auth, SchoolService schools, Auth
         return Created($"/api/v1/schools/{session.School.Id}", ToAuth(session));
     }
 
-    /// <summary>Sign in. Sets session cookies and returns an access token.</summary>
+    /// <summary>Step 1 of sign-in: verify the password and email a one-time code. No session yet —
+    /// call <c>login/verify</c> with the code to finish. Returns 202.</summary>
     [HttpPost("login")]
+    [ProducesResponseType(typeof(LoginChallengeResponse), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<LoginChallengeResponse>> Login(LoginRequest request, CancellationToken ct)
+    {
+        var challenge = await auth.BeginLoginAsync(request.Email, request.Password, ct);
+        return Accepted(new LoginChallengeResponse(challenge.Email, challenge.ExpiresAtUtc,
+            "A sign-in code was sent to your email. Enter it to finish signing in."));
+    }
+
+    /// <summary>Step 2 of sign-in: verify the emailed code. Sets session cookies + returns a token.</summary>
+    [HttpPost("login/verify")]
     [ProducesResponseType(typeof(AuthSessionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<AuthSessionResponse>> Login(LoginRequest request, CancellationToken ct)
+    public async Task<ActionResult<AuthSessionResponse>> VerifyLogin(VerifyOtpRequest request, CancellationToken ct)
     {
-        var session = await auth.LoginAsync(request.Email, request.Password, ct);
+        var session = await auth.VerifyLoginOtpAsync(request.Email, request.Code, ct);
         cookies.SetSession(Response, session);
         return Ok(ToAuth(session));
     }

@@ -23,6 +23,7 @@ public interface IApplicationDbContext
     DbSet<Payment> Payments { get; }
     DbSet<FeeAllocation> FeeAllocations { get; }
     DbSet<Parent> Parents { get; }
+    DbSet<LoginOtp> LoginOtps { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
@@ -69,4 +70,7 @@ public interface INotificationSender
 
     /// <summary>Welcome a newly registered user (school owner or parent).</summary>
     Task SendWelcomeAsync(string toEmail, string name, CancellationToken ct = default);
+
+    /// <summary>Email a one-time sign-in code (2-step login).</summary>
+    Task SendLoginCodeAsync(string toEmail, string code, CancellationToken ct = default);
 }

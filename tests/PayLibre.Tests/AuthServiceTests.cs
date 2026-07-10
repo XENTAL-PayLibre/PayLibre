@@ -71,16 +71,22 @@ public class AuthServiceTests
         using var db = new TestDb();
         await using (var ctx = db.CreateContext()) await Auth(ctx, db, new FakeXentalClient()).RegisterAsync(Reg());
 
+        (await DoLogin(db, "owner@acme.edu", "password1")).User.Email.Should().Be("owner@acme.edu");
+
         await using (var ctx = db.CreateContext())
         {
-            var ok = await Auth(ctx, db, new FakeXentalClient()).LoginAsync("owner@acme.edu", "password1");
-            ok.User.Email.Should().Be("owner@acme.edu");
-        }
-        await using (var ctx = db.CreateContext())
-        {
-            var bad = () => Auth(ctx, db, new FakeXentalClient()).LoginAsync("owner@acme.edu", "wrong");
+            var bad = () => AuthWith(ctx, db, new FakeNotificationSender()).BeginLoginAsync("owner@acme.edu", "wrong");
             await bad.Should().ThrowAsync<AuthenticationException>();
         }
+    }
+
+    /// <summary>Run the 2-step login (password -> emailed code -> session) with a captured notifier.</summary>
+    private static async Task<IssuedSession> DoLogin(TestDb db, string email, string password)
+    {
+        var notifier = new FakeNotificationSender();
+        await using (var ctx = db.CreateContext()) await AuthWith(ctx, db, notifier).BeginLoginAsync(email, password);
+        var code = notifier.LastLoginCode!;
+        await using (var ctx = db.CreateContext()) return await AuthWith(ctx, db, notifier).VerifyLoginOtpAsync(email, code);
     }
 
     [Fact]
@@ -92,8 +98,7 @@ public class AuthServiceTests
         {
             await Auth(ctx, db, new FakeXentalClient()).RegisterAsync(Reg());
         }
-        await using (var ctx = db.CreateContext())
-            login = await Auth(ctx, db, new FakeXentalClient()).LoginAsync("owner@acme.edu", "password1");
+        login = await DoLogin(db, "owner@acme.edu", "password1");
 
         IssuedSession refreshed;
         await using (var ctx = db.CreateContext())
@@ -133,11 +138,10 @@ public class AuthServiceTests
 
         await using (var ctx = db.CreateContext()) await AuthWith(ctx, db, notifier).ResetPasswordAsync(token, "newpassword1");
 
-        await using (var ctx = db.CreateContext())
-            (await Auth(ctx, db, new FakeXentalClient()).LoginAsync("owner@acme.edu", "newpassword1")).User.Email.Should().Be("owner@acme.edu");
+        (await DoLogin(db, "owner@acme.edu", "newpassword1")).User.Email.Should().Be("owner@acme.edu");
         await using (var ctx = db.CreateContext())
         {
-            var oldPw = () => Auth(ctx, db, new FakeXentalClient()).LoginAsync("owner@acme.edu", "password1");
+            var oldPw = () => AuthWith(ctx, db, new FakeNotificationSender()).BeginLoginAsync("owner@acme.edu", "password1");
             await oldPw.Should().ThrowAsync<AuthenticationException>();
         }
     }

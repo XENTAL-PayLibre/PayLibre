@@ -85,6 +85,20 @@ public sealed class PasswordResetTokenConfiguration : IEntityTypeConfiguration<P
     }
 }
 
+public sealed class LoginOtpConfiguration : IEntityTypeConfiguration<LoginOtp>
+{
+    public void Configure(EntityTypeBuilder<LoginOtp> b)
+    {
+        b.ToTable("login_otps");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Subject).HasConversion<string>().HasMaxLength(16).IsRequired();
+        b.Property(x => x.Email).HasMaxLength(320).IsRequired();
+        b.Property(x => x.CodeHash).HasMaxLength(64).IsRequired();
+        b.Property(x => x.ExpiresAtUtc).IsRequired();
+        b.HasIndex(x => new { x.Subject, x.SubjectId, x.Consumed });
+    }
+}
+
 public sealed class ClassConfiguration : IEntityTypeConfiguration<Class>
 {
     public void Configure(EntityTypeBuilder<Class> b)

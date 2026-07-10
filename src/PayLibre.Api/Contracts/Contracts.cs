@@ -18,6 +18,12 @@ public sealed record LoginRequest(
     [Required, EmailAddress] string Email,
     [Required] string Password);
 
+/// <summary>Step 2 of login: the emailed one-time code.</summary>
+public sealed record VerifyOtpRequest([Required, EmailAddress] string Email, [Required] string Code);
+
+/// <summary>Step 1 result: a sign-in code was emailed; call the verify endpoint to finish.</summary>
+public sealed record LoginChallengeResponse(string Email, DateTimeOffset ExpiresAtUtc, string Message);
+
 /// <summary>Request a password-reset link (always 202, whether or not the email exists).</summary>
 public sealed record ForgotPasswordRequest([Required, EmailAddress] string Email);
 

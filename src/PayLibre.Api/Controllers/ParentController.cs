@@ -30,15 +30,28 @@ public sealed class ParentController(ParentAuthService auth, ParentService paren
         return Created($"/api/v1/parent", ToSession(s));
     }
 
-    /// <summary>Sign in. Returns a bearer access token.</summary>
+    /// <summary>Step 1 of sign-in: verify the password and email a one-time code. Returns 202.</summary>
     [HttpPost("auth/login")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType(typeof(LoginChallengeResponse), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<LoginChallengeResponse>> Login(ParentLoginRequest request, CancellationToken ct)
+    {
+        var challenge = await auth.BeginLoginAsync(request.Email, request.Password, ct);
+        return Accepted(new LoginChallengeResponse(challenge.Email, challenge.ExpiresAtUtc,
+            "A sign-in code was sent to your email. Enter it to finish signing in."));
+    }
+
+    /// <summary>Step 2 of sign-in: verify the emailed code. Returns a bearer access token.</summary>
+    [HttpPost("auth/login/verify")]
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(ParentSessionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ParentSessionResponse>> Login(ParentLoginRequest request, CancellationToken ct)
+    public async Task<ActionResult<ParentSessionResponse>> VerifyLogin(VerifyOtpRequest request, CancellationToken ct)
     {
-        var s = await auth.LoginAsync(request.Email, request.Password, ct);
+        var s = await auth.VerifyLoginOtpAsync(request.Email, request.Code, ct);
         return Ok(ToSession(s));
     }
 

@@ -44,6 +44,14 @@ public sealed class NotificationSender(
         await SendEmailAsync(toEmail, "Welcome to PayLibre", html, ct);
     }
 
+    public async Task SendLoginCodeAsync(string toEmail, string code, CancellationToken ct = default)
+    {
+        var html = $"<p>Your PayLibre sign-in code is:</p><p style=\"font-size:22px;font-weight:bold;letter-spacing:3px\">{code}</p>"
+            + "<p>It expires shortly. If you didn't try to sign in, ignore this email.</p>";
+        logger.LogInformation("Login code for {Email}", toEmail);
+        await SendEmailAsync(toEmail, "Your PayLibre sign-in code", html, ct);
+    }
+
     public async Task SendPasswordResetAsync(string toEmail, string resetUrl, CancellationToken ct = default)
     {
         var html = $"<p>Reset your PayLibre password using the link below (valid for a short time):</p>"

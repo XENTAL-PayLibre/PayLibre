@@ -17,6 +17,8 @@ public sealed record RegisterSchoolInput(
 public sealed record IssuedSession(
     AccessToken Access, string RefreshToken, DateTimeOffset RefreshExpiresAt, SchoolUser User, School School);
 
+public sealed record LoginChallenge(string Email, DateTimeOffset ExpiresAtUtc);
+
 /// <summary>
 /// School registration + dashboard authentication. Registration also provisions the school's Xental
 /// sub-merchant + payout account (so Xental settles fees to the school's bank). Sessions are issued
@@ -77,14 +79,40 @@ public sealed class AuthService(
         return session;
     }
 
-    public async Task<IssuedSession> LoginAsync(string email, string password, CancellationToken ct = default)
+    /// <summary>Step 1 of login: verify the password and email a one-time code. No session yet.</summary>
+    public async Task<LoginChallenge> BeginLoginAsync(string email, string password, CancellationToken ct = default)
     {
         email = (email ?? string.Empty).Trim().ToLowerInvariant();
         var user = await db.SchoolUsers.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == email, ct);
         if (user is null || !hasher.Verify(password ?? string.Empty, user.PasswordHash))
             throw new AuthenticationException("Invalid email or password.");
-        var school = await db.Schools.IgnoreQueryFilters().FirstAsync(s => s.Id == user.SchoolId, ct);
 
+        var code = GenerateOtp();
+        var otp = new LoginOtp(OtpSubject.SchoolUser, user.Id, email, Sha256(code), clock.UtcNow.AddMinutes(10));
+        db.LoginOtps.Add(otp);
+        await db.SaveChangesAsync(ct);
+        try { await notifier.SendLoginCodeAsync(email, code, ct); } catch { /* best-effort */ }
+        return new LoginChallenge(email, otp.ExpiresAtUtc);
+    }
+
+    /// <summary>Step 2 of login: verify the emailed code and start the session.</summary>
+    public async Task<IssuedSession> VerifyLoginOtpAsync(string email, string code, CancellationToken ct = default)
+    {
+        email = (email ?? string.Empty).Trim().ToLowerInvariant();
+        var otp = (await db.LoginOtps.IgnoreQueryFilters()
+                .Where(o => o.Subject == OtpSubject.SchoolUser && o.Email == email && !o.Consumed).ToListAsync(ct))
+            .OrderByDescending(o => o.CreatedAtUtc).FirstOrDefault();
+        if (otp is null || !otp.IsRedeemable(clock.UtcNow))
+            throw new AuthenticationException("Invalid or expired code. Please sign in again.");
+        if (Sha256(code ?? string.Empty) != otp.CodeHash)
+        {
+            otp.RegisterFailedAttempt();
+            await db.SaveChangesAsync(ct);
+            throw new AuthenticationException("Invalid code.");
+        }
+        otp.Consume();
+        var user = await db.SchoolUsers.IgnoreQueryFilters().FirstAsync(u => u.Id == otp.SubjectId, ct);
+        var school = await db.Schools.IgnoreQueryFilters().FirstAsync(s => s.Id == user.SchoolId, ct);
         var session = await IssueSessionAsync(user, school, ct);
         await db.SaveChangesAsync(ct);
         return session;
@@ -167,6 +195,9 @@ public sealed class AuthService(
 
     private static string Sha256(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+
+    // 6-digit numeric sign-in code.
+    public static string GenerateOtp() => RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
 
     // Unambiguous 8-char code (no 0/O/1/I) parents type to self-enrol.
     private static string GenerateJoinCode()
