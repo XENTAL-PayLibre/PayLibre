@@ -4,16 +4,15 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Restore first (layer-cached on project/solution changes only).
-COPY PayLibre.slnx ./
+# Restore the API project graph (not the solution) so the test project is not needed here.
 COPY src/PayLibre.Domain/PayLibre.Domain.csproj                 src/PayLibre.Domain/
 COPY src/PayLibre.Application/PayLibre.Application.csproj        src/PayLibre.Application/
 COPY src/PayLibre.Infrastructure/PayLibre.Infrastructure.csproj src/PayLibre.Infrastructure/
 COPY src/PayLibre.Api/PayLibre.Api.csproj                        src/PayLibre.Api/
-RUN dotnet restore PayLibre.slnx
+RUN dotnet restore src/PayLibre.Api/PayLibre.Api.csproj
 
-# Copy the rest and publish.
-COPY . .
+# Copy the source and publish (exclude the test project from the image build context via .dockerignore).
+COPY src/ src/
 RUN dotnet publish src/PayLibre.Api/PayLibre.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
 
 # ---- Runtime stage ------------------------------------------------------

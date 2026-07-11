@@ -1,17 +1,27 @@
 using Microsoft.Extensions.DependencyInjection;
+using PayLibre.Application.Authentication;
+using PayLibre.Application.Enrolment;
+using PayLibre.Application.Schools;
 
 namespace PayLibre.Application;
 
-/// <summary>
-/// Composition root for the Application layer. Each module registers its
-/// handlers, validators and services from here as the system grows.
-/// </summary>
+/// <summary>Composition root for the Application layer.</summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Application-wide registrations (validators, pipeline behaviours,
-        // mappers, use-case handlers) are added here per module.
+        services.AddScoped<AuthService>();
+        services.AddScoped<SchoolService>();
+        services.AddScoped<ClassService>();
+        services.AddScoped<StudentService>();
+        services.AddScoped<SelfEnrolmentService>();
+        services.AddScoped<Fees.FeeCategoryService>();
+        services.AddScoped<Fees.FeeService>();
+        services.AddScoped<Payments.ReconciliationService>();
+        services.AddScoped<Payments.PaymentService>();
+        services.AddScoped<Dashboard.DashboardService>();
+        services.AddScoped<Parents.ParentAuthService>();
+        services.AddScoped<Parents.ParentService>();
         return services;
     }
 }
