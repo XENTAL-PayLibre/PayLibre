@@ -17,9 +17,9 @@ public sealed class SchoolConfiguration : IEntityTypeConfiguration<School>
         b.HasIndex(x => x.OfficialEmail).IsUnique();
         b.Property(x => x.Phone).HasMaxLength(40).IsRequired();
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
-        b.Property(x => x.SettlementBankName).HasMaxLength(200).IsRequired();
-        b.Property(x => x.SettlementBankCode).HasMaxLength(16).IsRequired();
-        b.Property(x => x.SettlementAccountNumber).HasMaxLength(20).IsRequired();
+        b.Property(x => x.SettlementBankName).HasMaxLength(200);
+        b.Property(x => x.SettlementBankCode).HasMaxLength(16);
+        b.Property(x => x.SettlementAccountNumber).HasMaxLength(20);
         b.Property(x => x.SettlementAccountName).HasMaxLength(200);
         b.Property(x => x.XentalSubMerchantRef).HasMaxLength(100);
         b.Property(x => x.JoinCode).HasMaxLength(16);

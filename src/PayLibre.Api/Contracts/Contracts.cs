@@ -3,16 +3,21 @@ using System.ComponentModel.DataAnnotations;
 namespace PayLibre.Api.Contracts;
 
 // ---- Auth & school ----
-/// <summary>Register a school + its owner. <c>SettlementBankName</c>/<c>SettlementBankCode</c> come from
-/// <c>GET /api/v1/banks</c>; the account name is resolved by the provider. Sets the session cookies.</summary>
+/// <summary>Register a school + its owner. Settlement (payout) bank details are NOT collected here — the
+/// school configures where fees settle later from Settings (<c>PUT /api/v1/schools/settlement</c>).
+/// Sets the session cookies and returns an access token.</summary>
 public sealed record RegisterSchoolRequest(
     [Required, StringLength(200, MinimumLength = 2)] string SchoolName,
     [Required, EmailAddress] string OfficialEmail,
     [Required, StringLength(40, MinimumLength = 5)] string Phone,
-    [Required, StringLength(200)] string SettlementBankName,
-    [Required, StringLength(16)] string SettlementBankCode,
-    [Required, StringLength(20, MinimumLength = 6)] string SettlementAccountNumber,
     [Required, StringLength(200, MinimumLength = 8)] string Password);
+
+/// <summary>Set (or change) the school's payout account. <c>BankName</c>/<c>BankCode</c> come from
+/// <c>GET /api/v1/banks</c>; the account holder name is resolved by the provider.</summary>
+public sealed record UpdateSettlementRequest(
+    [Required, StringLength(200)] string BankName,
+    [Required, StringLength(16)] string BankCode,
+    [Required, StringLength(20, MinimumLength = 6)] string AccountNumber);
 
 public sealed record LoginRequest(
     [Required, EmailAddress] string Email,
@@ -41,7 +46,8 @@ public sealed record AuthSessionResponse(
 
 public sealed record SchoolResponse(
     Guid Id, string Name, string OfficialEmail, string Phone, string Status,
-    string SettlementBankName, string SettlementAccountNumber, string? SettlementAccountName, string? JoinCode);
+    string? SettlementBankName, string? SettlementAccountNumber, string? SettlementAccountName,
+    bool SettlementConfigured, string? JoinCode);
 
 // ---- Parent self-enrolment (public, code-based) ----
 public sealed record EnrolContextClassResponse(Guid Id, string Name, string Session);

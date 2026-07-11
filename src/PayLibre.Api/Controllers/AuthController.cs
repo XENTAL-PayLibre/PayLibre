@@ -30,8 +30,7 @@ public sealed class AuthController(AuthService auth, SchoolService schools, Auth
     public async Task<ActionResult<AuthSessionResponse>> Register(RegisterSchoolRequest request, CancellationToken ct)
     {
         var session = await auth.RegisterAsync(new RegisterSchoolInput(
-            request.SchoolName, request.OfficialEmail, request.Phone,
-            request.SettlementBankName, request.SettlementBankCode, request.SettlementAccountNumber, request.Password), ct);
+            request.SchoolName, request.OfficialEmail, request.Phone, request.Password), ct);
         cookies.SetSession(Response, session);
         return Created($"/api/v1/schools/{session.School.Id}", ToAuth(session));
     }
@@ -120,5 +119,5 @@ public sealed class AuthController(AuthService auth, SchoolService schools, Auth
 
     private static SchoolResponse ToSchool(School s) => new(
         s.Id, s.Name, s.OfficialEmail, s.Phone, s.Status.ToString(),
-        s.SettlementBankName, s.SettlementAccountNumber, s.SettlementAccountName, s.JoinCode);
+        s.SettlementBankName, s.SettlementAccountNumber, s.SettlementAccountName, s.SettlementConfigured, s.JoinCode);
 }

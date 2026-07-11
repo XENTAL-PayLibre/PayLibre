@@ -23,7 +23,7 @@ public class ParentServiceTests
         await using (var ctx = db.CreateContext())
         {
             var auth = new AuthService(ctx, new FakePasswordHasher(), new FakeTokenService(), x, new FakeNotificationSender(), db.Clock, Opts);
-            schoolId = (await auth.RegisterAsync(new RegisterSchoolInput("Acme", "o@a.edu", "0800", "Bank", "999", "0123456789", "password1"))).School.Id;
+            schoolId = (await auth.RegisterAsync(new RegisterSchoolInput("Acme", "o@a.edu", "0800", "password1"))).School.Id;
         }
         db.Tenant.TenantId = schoolId;
         Guid classId, catId, studentId;

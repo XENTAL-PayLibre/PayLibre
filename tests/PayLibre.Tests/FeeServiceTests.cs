@@ -21,7 +21,7 @@ public class FeeServiceTests
     {
         await using var ctx = db.CreateContext();
         var auth = new AuthService(ctx, new FakePasswordHasher(), new FakeTokenService(), x, new FakeNotificationSender(), db.Clock, Opts);
-        var s = await auth.RegisterAsync(new RegisterSchoolInput("Acme", "o@acme.edu", "08000000000", "Bank", "999", "0123456789", "password1"));
+        var s = await auth.RegisterAsync(new RegisterSchoolInput("Acme", "o@acme.edu", "08000000000", "password1"));
         db.Tenant.TenantId = s.School.Id;
         return s.School.Id;
     }

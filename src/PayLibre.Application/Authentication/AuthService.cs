@@ -11,8 +11,7 @@ using PayLibre.Domain.Schools;
 namespace PayLibre.Application.Authentication;
 
 public sealed record RegisterSchoolInput(
-    string SchoolName, string OfficialEmail, string Phone,
-    string SettlementBankName, string SettlementBankCode, string SettlementAccountNumber, string Password);
+    string SchoolName, string OfficialEmail, string Phone, string Password);
 
 public sealed record IssuedSession(
     AccessToken Access, string RefreshToken, DateTimeOffset RefreshExpiresAt, SchoolUser User, School School);
@@ -46,9 +45,9 @@ public sealed class AuthService(
             throw new ConflictException("An account with this email already exists.");
 
         // Id is assigned at construction, so we can reference it with Xental before persisting —
-        // if any Xental call fails, nothing is saved (clean rollback).
-        var school = new School(input.SchoolName, email, input.Phone,
-            input.SettlementBankName, input.SettlementBankCode, input.SettlementAccountNumber);
+        // if any Xental call fails, nothing is saved (clean rollback). The payout account is NOT set
+        // here: the school configures where fees settle later, from inside the app (Settings).
+        var school = new School(input.SchoolName, email, input.Phone);
         var owner = new SchoolUser(school.Id, email, hasher.Hash(input.Password), SchoolRole.Owner);
 
         var reference = $"sch_{school.Id:N}";
@@ -56,13 +55,10 @@ public sealed class AuthService(
         try
         {
             sub = await xental.CreateSubMerchantAsync(school.Name, reference, ct);
-            sub = await xental.SetSubMerchantPayoutAsync(
-                sub.Id, school.SettlementBankName, school.SettlementBankCode,
-                school.SettlementAccountNumber, _options.PlatformFeeBps, ct);
         }
         catch (Exception ex) when (ex is not ValidationException and not ConflictException)
         {
-            throw new UpstreamException($"Could not set up settlement with the payment provider: {ex.Message}");
+            throw new UpstreamException($"Could not set up the school with the payment provider: {ex.Message}");
         }
         school.LinkXentalSubMerchant(sub.Reference, sub.Id, sub.SettlementAccountName);
 

@@ -46,6 +46,9 @@ var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOption
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Keep claims verbatim ("role", "scope", "sub", "email") instead of remapping short names to
+        // the long WS-* URIs — so RequireClaim("role", ...) etc. match what JwtTokenService issues.
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,

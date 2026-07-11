@@ -16,7 +16,7 @@ public class AuthServiceTests
         new(ctx, new FakePasswordHasher(), new FakeTokenService(), xental, new FakeNotificationSender(), db.Clock, Options.Create(new PayLibreOptions()));
 
     private static RegisterSchoolInput Reg(string email = "owner@acme.edu") =>
-        new("Acme Academy", email, "08012345678", "Test Bank", "999", "0123456789", "password1");
+        new("Acme Academy", email, "08012345678", "password1");
 
     [Fact]
     public async Task Register_creates_school_owner_refresh_token_and_links_a_xental_submerchant()
@@ -29,7 +29,8 @@ public class AuthServiceTests
 
         session.School.Status.Should().Be(SchoolStatus.Active);
         session.School.XentalSubMerchantRef.Should().NotBeNullOrEmpty();
-        session.School.SettlementAccountName.Should().Be("RESOLVED 0123456789");
+        session.School.SettlementConfigured.Should().BeFalse("payout is configured later, from Settings — not at registration");
+        session.School.SettlementAccountNumber.Should().BeNull();
         session.User.Role.Should().Be(SchoolRole.Owner);
         xental.SubMerchantsCreated.Should().Be(1);
 

@@ -17,10 +17,15 @@ public sealed class School : BaseEntity
     public SchoolStatus Status { get; private set; }
 
     // Settlement destination (the school's bank), pushed to Xental as the sub-merchant payout account.
-    public string SettlementBankName { get; private set; } = null!;
-    public string SettlementBankCode { get; private set; } = null!;
-    public string SettlementAccountNumber { get; private set; } = null!;
+    // Set from inside the app after registration (not collected at sign-up), so these stay null until
+    // the school configures where fees should be paid out.
+    public string? SettlementBankName { get; private set; }
+    public string? SettlementBankCode { get; private set; }
+    public string? SettlementAccountNumber { get; private set; }
     public string? SettlementAccountName { get; private set; }
+
+    /// <summary>True once the school has configured a payout account (via the in-app settlement settings).</summary>
+    public bool SettlementConfigured => !string.IsNullOrWhiteSpace(SettlementAccountNumber);
 
     // Xental handles, cached after provisioning so we never re-derive them.
     public string? XentalSubMerchantRef { get; private set; }
@@ -32,15 +37,11 @@ public sealed class School : BaseEntity
 
     private School() { }
 
-    public School(string name, string officialEmail, string phone,
-        string settlementBankName, string settlementBankCode, string settlementAccountNumber)
+    public School(string name, string officialEmail, string phone)
     {
         Name = DomainException.Require(name, nameof(name));
         OfficialEmail = DomainException.Require(officialEmail, nameof(officialEmail)).ToLowerInvariant();
         Phone = DomainException.Require(phone, nameof(phone));
-        SettlementBankName = DomainException.Require(settlementBankName, nameof(settlementBankName));
-        SettlementBankCode = DomainException.Require(settlementBankCode, nameof(settlementBankCode));
-        SettlementAccountNumber = DomainException.Require(settlementAccountNumber, nameof(settlementAccountNumber));
         Status = SchoolStatus.Pending;
     }
 
@@ -54,11 +55,14 @@ public sealed class School : BaseEntity
         Status = SchoolStatus.Active;
     }
 
-    public void UpdateSettlement(string bankName, string bankCode, string accountNumber)
+    /// <summary>Set (or change) the payout account, after it has been configured with Xental.</summary>
+    public void SetSettlement(string bankName, string bankCode, string accountNumber, string? accountName)
     {
         SettlementBankName = DomainException.Require(bankName, nameof(bankName));
         SettlementBankCode = DomainException.Require(bankCode, nameof(bankCode));
         SettlementAccountNumber = DomainException.Require(accountNumber, nameof(accountNumber));
+        if (!string.IsNullOrWhiteSpace(accountName))
+            SettlementAccountName = accountName.Trim();
     }
 
     public void Suspend() => Status = SchoolStatus.Suspended;

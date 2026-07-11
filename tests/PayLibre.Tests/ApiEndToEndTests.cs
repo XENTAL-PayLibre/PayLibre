@@ -35,14 +35,22 @@ public sealed class ApiEndToEndTests : IClassFixture<ApiEndToEndTests.PayLibreFa
             schoolName = "Acme Academy",
             officialEmail = "owner@acme.edu",
             phone = "08012345678",
-            settlementBankName = "Test Bank",
-            settlementBankCode = "999",
-            settlementAccountNumber = "0123456789",
             password = "password1",
         });
         register.StatusCode.Should().Be(HttpStatusCode.Created);
         var setCookies = string.Join("; ", register.Headers.TryGetValues("Set-Cookie", out var c) ? c : Array.Empty<string>());
         setCookies.Should().Contain("plb_access").And.Contain("httponly", "session tokens must be HttpOnly cookies");
+
+        // No payout account yet — it is configured from Settings, not at registration.
+        (await register.Content.ReadAsStringAsync()).Should().Contain("\"settlementConfigured\":false");
+
+        // Configure settlement from inside the app (Owner) → resolves + persists the payout account.
+        var settle = await client.PutAsJsonAsync("/api/v1/schools/settlement", new
+        {
+            bankName = "Test Bank", bankCode = "999", accountNumber = "0123456789",
+        });
+        settle.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await settle.Content.ReadAsStringAsync()).Should().Contain("\"settlementConfigured\":true").And.Contain("0123456789");
 
         // Authenticated identity via the cookie.
         var me = await client.GetAsync("/api/v1/auth/me");

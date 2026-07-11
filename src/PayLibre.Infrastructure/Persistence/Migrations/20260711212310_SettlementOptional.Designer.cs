@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PayLibre.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using PayLibre.Infrastructure.Persistence;
 namespace PayLibre.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PayLibreDbContext))]
-    partial class PayLibreDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260711212310_SettlementOptional")]
+    partial class SettlementOptional
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
