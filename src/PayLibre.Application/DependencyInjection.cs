@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<Payments.WebhookService>();
         services.AddScoped<Payments.RefundService>();
         services.AddScoped<Payments.PaymentService>();
+        services.AddScoped<Webhooks.OutboundWebhookService>();
         services.AddScoped<Dashboard.DashboardService>();
         services.AddScoped<Parents.ParentAuthService>();
         services.AddScoped<Parents.ParentService>();

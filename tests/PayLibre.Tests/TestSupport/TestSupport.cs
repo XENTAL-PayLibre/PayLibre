@@ -86,6 +86,21 @@ public sealed class FakeXentalClient : IXentalClient
     }
 }
 
+public sealed class FakeOutboundWebhookSender : IOutboundWebhookSender
+{
+    public bool Succeed { get; set; } = true;
+    public int Posts { get; private set; }
+    public string? LastUrl { get; private set; }
+    public string? LastPayload { get; private set; }
+    public Task<(bool Ok, int? StatusCode, string? Error)> PostAsync(string url, string payload, string signingSecret, CancellationToken ct = default)
+    {
+        Posts++;
+        LastUrl = url;
+        LastPayload = payload;
+        return Task.FromResult(Succeed ? (true, (int?)200, (string?)null) : (false, (int?)500, (string?)"boom"));
+    }
+}
+
 public sealed class FakeNotificationSender : INotificationSender
 {
     public int Sent { get; private set; }

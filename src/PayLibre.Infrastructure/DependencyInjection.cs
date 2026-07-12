@@ -34,8 +34,9 @@ public static class DependencyInjection
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, JwtTokenService>();
-        services.AddHttpClient(); // used by the notification sender (Resend/Termii/Twilio)
+        services.AddHttpClient(); // used by the notification sender (Resend/Termii/Twilio) + outbound webhooks
         services.AddScoped<INotificationSender, NotificationSender>();
+        services.AddScoped<IOutboundWebhookSender, Webhooks.OutboundWebhookSender>();
 
         // Xental integration — the only external dependency.
         services.AddHttpClient<IXentalClient, XentalClient>((sp, http) =>

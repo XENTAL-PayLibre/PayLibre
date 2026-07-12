@@ -14,7 +14,9 @@ public sealed record DepositResult(string Status, Guid? PaymentId, int InvoicesS
 /// on the Xental transaction reference. Any surplus beyond outstanding fees is left as unattributed
 /// (student credit) — the payment is still recorded in full.
 /// </summary>
-public sealed class ReconciliationService(IApplicationDbContext db, IClock clock, INotificationSender notifier)
+public sealed class ReconciliationService(
+    IApplicationDbContext db, IClock clock, INotificationSender notifier,
+    Webhooks.OutboundWebhookService? outbound = null)
 {
     public async Task<DepositResult> ProcessDepositAsync(
         string accountRef, long amountKobo, long netCreditKobo, string xentalRef, string? payerName,
@@ -62,6 +64,26 @@ public sealed class ReconciliationService(IApplicationDbContext db, IClock clock
                 amountKobo, settled, outstanding, occurredAt, ct);
         }
         catch { /* best-effort */ }
+
+        // Notify the school's own systems (best-effort; queued + delivered with retries by the worker).
+        if (outbound is not null)
+        {
+            try
+            {
+                await outbound.EnqueueAsync(student.SchoolId, "payment.received", new
+                {
+                    studentId = student.Id,
+                    admissionNo = student.AdmissionNo,
+                    amountKobo,
+                    netCreditKobo,
+                    invoicesSettled = settled,
+                    outstandingKobo = outstanding,
+                    transactionRef = xentalRef,
+                    occurredAtUtc = occurredAt,
+                }, ct);
+            }
+            catch { /* best-effort */ }
+        }
 
         return new("processed", payment.Id, settled, allocated);
     }

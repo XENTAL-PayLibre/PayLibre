@@ -7,6 +7,7 @@ using PayLibre.Domain.Fees;
 using PayLibre.Domain.Parents;
 using PayLibre.Domain.Payments;
 using PayLibre.Domain.Schools;
+using PayLibre.Domain.Webhooks;
 
 namespace PayLibre.Application.Common.Interfaces;
 
@@ -27,6 +28,8 @@ public interface IApplicationDbContext
     DbSet<FeeAllocation> FeeAllocations { get; }
     DbSet<RefundRequest> RefundRequests { get; }
     DbSet<WebhookEvent> WebhookEvents { get; }
+    DbSet<WebhookSubscription> WebhookSubscriptions { get; }
+    DbSet<WebhookDelivery> WebhookDeliveries { get; }
     DbSet<AuditEvent> AuditEvents { get; }
     DbSet<ApiKey> ApiKeys { get; }
     DbSet<Parent> Parents { get; }
@@ -36,6 +39,14 @@ public interface IApplicationDbContext
 }
 
 /// <summary>Resolves the current tenant (school) from the authenticated request.</summary>
+/// <summary>Delivers a signed outbound webhook to a school endpoint (implemented in Infrastructure).</summary>
+public interface IOutboundWebhookSender
+{
+    /// <summary>POST the payload to <paramref name="url"/> with an HMAC-SHA256 signature over the body
+    /// (header x-paylibre-signature) keyed by <paramref name="signingSecret"/>. Returns success + status.</summary>
+    Task<(bool Ok, int? StatusCode, string? Error)> PostAsync(string url, string payload, string signingSecret, CancellationToken ct = default);
+}
+
 public interface ITenantContext
 {
     Guid? TenantId { get; }

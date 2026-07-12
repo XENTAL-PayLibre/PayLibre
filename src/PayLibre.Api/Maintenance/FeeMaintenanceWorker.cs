@@ -80,7 +80,8 @@ public sealed class FeeMaintenanceWorker(
     {
         var applied = await scope.ServiceProvider.GetRequiredService<LateFeeService>().ApplyDueAsync(ct);
         var sent = await scope.ServiceProvider.GetRequiredService<ReminderService>().SendDueAsync(ct);
-        if (applied > 0 || sent > 0)
-            logger.LogInformation("Fee-maintenance: {Applied} late fees applied, {Sent} reminders sent.", applied, sent);
+        var delivered = await scope.ServiceProvider.GetRequiredService<PayLibre.Application.Webhooks.OutboundWebhookService>().DeliverDueAsync(ct);
+        if (applied > 0 || sent > 0 || delivered > 0)
+            logger.LogInformation("Maintenance: {Applied} late fees, {Sent} reminders, {Delivered} webhooks delivered.", applied, sent, delivered);
     }
 }

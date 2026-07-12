@@ -79,6 +79,14 @@ public sealed record ApiKeyResponse(
 /// <summary>Returned only once, at creation — the full key value is never shown again.</summary>
 public sealed record CreatedApiKeyResponse(ApiKeyResponse Key, string PlaintextKey);
 
+// ---- Outbound webhook subscriptions ----
+/// <summary>Register a school endpoint to receive signed PayLibre events (e.g. payment.received).</summary>
+public sealed record CreateWebhookSubscriptionRequest([Required, Url, StringLength(500)] string Url);
+public sealed record WebhookSubscriptionResponse(
+    Guid Id, string Url, bool Active, DateTimeOffset CreatedAtUtc, DateTimeOffset? RevokedAtUtc);
+/// <summary>Returned only once, at creation — the signing secret is never shown again.</summary>
+public sealed record CreatedWebhookSubscriptionResponse(WebhookSubscriptionResponse Subscription, string SigningSecret);
+
 // ---- Public API (X-Api-Key) ----
 /// <summary>Create or update a student by admission number (idempotent sync from a school system).</summary>
 public sealed record PublicUpsertStudentRequest(
