@@ -27,6 +27,12 @@ public sealed class School : BaseEntity
     /// <summary>True once the school has configured a payout account (via the in-app settlement settings).</summary>
     public bool SettlementConfigured => !string.IsNullOrWhiteSpace(SettlementAccountNumber);
 
+    // Late-fee policy: a percentage (basis points) of the outstanding balance, applied once a fee is
+    // overdue past the grace period. 0 bps = no late fees.
+    public int LateFeeBps { get; private set; }
+    public int LateFeeGraceDays { get; private set; }
+    public bool LateFeesEnabled => LateFeeBps > 0;
+
     // Xental handles, cached after provisioning so we never re-derive them.
     public string? XentalSubMerchantRef { get; private set; }
     public Guid? XentalSubMerchantId { get; private set; }
@@ -63,6 +69,16 @@ public sealed class School : BaseEntity
         SettlementAccountNumber = DomainException.Require(accountNumber, nameof(accountNumber));
         if (!string.IsNullOrWhiteSpace(accountName))
             SettlementAccountName = accountName.Trim();
+    }
+
+    /// <summary>Set the late-fee policy. <paramref name="bps"/> is a percentage of outstanding in basis
+    /// points (500 = 5%); 0 disables late fees. <paramref name="graceDays"/> is days after due before it applies.</summary>
+    public void ConfigureLateFees(int bps, int graceDays)
+    {
+        if (bps < 0 || bps > 10_000) throw new DomainException("Late-fee rate must be between 0 and 10000 bps (0–100%).");
+        if (graceDays < 0 || graceDays > 365) throw new DomainException("Grace period must be between 0 and 365 days.");
+        LateFeeBps = bps;
+        LateFeeGraceDays = graceDays;
     }
 
     public void Suspend() => Status = SchoolStatus.Suspended;

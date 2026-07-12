@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.Configure<PayLibreOptions>(configuration.GetSection(PayLibreOptions.SectionName));
         services.Configure<Notifications.ResendOptions>(configuration.GetSection(Notifications.ResendOptions.SectionName));
         services.Configure<Notifications.SmsOptions>(configuration.GetSection(Notifications.SmsOptions.SectionName));
+        services.Configure<Maintenance.MaintenanceOptions>(configuration.GetSection(Maintenance.MaintenanceOptions.SectionName));
 
         // Persistence (Postgres). The DbContext also serves as IApplicationDbContext.
         var connectionString = configuration.GetConnectionString("Default");

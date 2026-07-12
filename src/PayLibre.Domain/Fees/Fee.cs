@@ -42,10 +42,14 @@ public sealed class Fee : BaseEntity, ITenantOwned
     public long AmountKobo { get; private set; }
     public DateTimeOffset DueDateUtc { get; private set; }
 
+    /// <summary>Whether an overdue late-fee surcharge applies to this fee (when the school has one configured).</summary>
+    public bool AppliesLateFee { get; private set; }
+
     private Fee() { }
 
-    public Fee(Guid schoolId, string name, Guid feeCategoryId, Guid classId, string session, Term term, long amountKobo, DateTimeOffset dueDateUtc)
+    public Fee(Guid schoolId, string name, Guid feeCategoryId, Guid classId, string session, Term term, long amountKobo, DateTimeOffset dueDateUtc, bool appliesLateFee = true)
     {
+        AppliesLateFee = appliesLateFee;
         SchoolId = schoolId;
         Name = DomainException.Require(name, nameof(name));
         if (feeCategoryId == Guid.Empty) throw new DomainException("A fee category is required.");
@@ -73,6 +77,15 @@ public sealed class StudentFee : BaseEntity, ITenantOwned
     public FeeStatus Status { get; private set; }
     public DateTimeOffset DueDateUtc { get; private set; }
 
+    // Late-fee surcharge applied once when overdue (0 = none). Kept separate so the original fee amount
+    // is still derivable (AmountKobo - LateFeeAppliedKobo) and the surcharge isn't re-applied.
+    public long LateFeeAppliedKobo { get; private set; }
+    public DateTimeOffset? LateFeeAppliedAtUtc { get; private set; }
+
+    // Dunning: the last reminder stage sent + when, so the maintenance job never repeats a stage.
+    public string? LastReminderStage { get; private set; }
+    public DateTimeOffset? LastReminderAtUtc { get; private set; }
+
     public long OutstandingKobo => Math.Max(0, AmountKobo - AmountPaidKobo);
 
     private StudentFee() { }
@@ -85,6 +98,25 @@ public sealed class StudentFee : BaseEntity, ITenantOwned
         AmountKobo = amountKobo;
         DueDateUtc = dueDateUtc;
         RecomputeStatus(now);
+    }
+
+    /// <summary>Add a one-time overdue surcharge to this invoice (increases the amount owed). Idempotent:
+    /// a no-op if a late fee was already applied or the surcharge is non-positive.</summary>
+    public bool ApplyLateFee(long surchargeKobo, DateTimeOffset now)
+    {
+        if (LateFeeAppliedKobo > 0 || surchargeKobo <= 0) return false;
+        LateFeeAppliedKobo = surchargeKobo;
+        LateFeeAppliedAtUtc = now;
+        AmountKobo += surchargeKobo;
+        RecomputeStatus(now);
+        return true;
+    }
+
+    /// <summary>Record that a dunning reminder for <paramref name="stage"/> was sent now.</summary>
+    public void RecordReminder(string stage, DateTimeOffset now)
+    {
+        LastReminderStage = stage;
+        LastReminderAtUtc = now;
     }
 
     /// <summary>Apply up to <paramref name="available"/> kobo to this invoice; returns the amount applied.</summary>

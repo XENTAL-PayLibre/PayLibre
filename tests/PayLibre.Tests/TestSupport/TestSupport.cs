@@ -101,6 +101,19 @@ public sealed class FakeNotificationSender : INotificationSender
         LastReceiptEmail = email;
         return Task.CompletedTask;
     }
+
+    public int Reminders { get; private set; }
+    public int OverdueReminders { get; private set; }
+    public string? LastReminderFee { get; private set; }
+    public Task SendFeeReminderAsync(
+        string toName, string? email, string? phone, string studentName, string feeName,
+        long outstandingKobo, DateTimeOffset dueDateUtc, bool overdue, CancellationToken ct = default)
+    {
+        Reminders++;
+        if (overdue) OverdueReminders++;
+        LastReminderFee = feeName;
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>SQLite in-memory database shared across contexts for one test.</summary>

@@ -81,6 +81,28 @@ public sealed class NotificationSender(
         if (!string.IsNullOrWhiteSpace(phone)) await SendSmsAsync(phone!, text, ct);
     }
 
+    public async Task SendFeeReminderAsync(
+        string toName, string? email, string? phone, string studentName, string feeName,
+        long outstandingKobo, DateTimeOffset dueDateUtc, bool overdue, CancellationToken ct = default)
+    {
+        string Naira(long kobo) => "₦" + (kobo / 100m).ToString("N2");
+        var due = dueDateUtc.ToString("dd MMM yyyy");
+        var lead = overdue
+            ? $"The fee \"{feeName}\" for {studentName} is overdue (was due {due})."
+            : $"The fee \"{feeName}\" for {studentName} is due on {due}.";
+        var text = $"{lead} Outstanding: {Naira(outstandingKobo)}. Please pay into the student's PayLibre account.";
+        var subject = overdue ? $"Overdue fee for {studentName}" : $"Fee reminder for {studentName}";
+        var html = $"<p>Dear {toName},</p><p>{lead}</p>"
+            + $"<p>Outstanding balance: <b>{Naira(outstandingKobo)}</b>.</p>"
+            + "<p>Please transfer into the student's PayLibre fee account — payments are applied automatically.</p>";
+
+        logger.LogInformation("Fee reminder ({Kind}) for {Student} -> {Email}/{Phone}: {Fee}, {Outstanding} outstanding",
+            overdue ? "overdue" : "upcoming", studentName, email ?? "-", phone ?? "-", feeName, outstandingKobo);
+
+        if (!string.IsNullOrWhiteSpace(email)) await SendEmailAsync(email!, subject, html, ct);
+        if (!string.IsNullOrWhiteSpace(phone)) await SendSmsAsync(phone!, text, ct);
+    }
+
     public async Task SendPasswordResetAsync(string toEmail, string resetUrl, CancellationToken ct = default)
     {
         var html = $"<p>Reset your PayLibre password using the link below (valid for a short time):</p>"

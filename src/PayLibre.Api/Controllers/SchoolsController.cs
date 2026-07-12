@@ -35,7 +35,20 @@ public sealed class SchoolsController(SchoolService schools) : ControllerBase
         return Ok(ToSchool(school));
     }
 
+    /// <summary>Set the school's late-fee policy (Owner/Admin). A percentage of the outstanding balance,
+    /// applied once a fee is overdue past the grace period. <c>lateFeeBps = 0</c> disables late fees.</summary>
+    [HttpPut("late-fees")]
+    [Authorize(Policy = AuthPolicies.ManageSchool)]
+    [ProducesResponseType(typeof(SchoolResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<SchoolResponse>> UpdateLateFees(UpdateLateFeesRequest request, CancellationToken ct)
+    {
+        var school = await schools.UpdateLateFeesAsync(request.LateFeeBps, request.GraceDays, ct);
+        return Ok(ToSchool(school));
+    }
+
     private static SchoolResponse ToSchool(School s) => new(
         s.Id, s.Name, s.OfficialEmail, s.Phone, s.Status.ToString(),
-        s.SettlementBankName, s.SettlementAccountNumber, s.SettlementAccountName, s.SettlementConfigured, s.JoinCode);
+        s.SettlementBankName, s.SettlementAccountNumber, s.SettlementAccountName, s.SettlementConfigured,
+        s.LateFeeBps, s.LateFeeGraceDays, s.JoinCode);
 }

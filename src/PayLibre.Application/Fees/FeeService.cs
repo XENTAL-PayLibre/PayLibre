@@ -6,7 +6,7 @@ using PayLibre.Domain.Fees;
 
 namespace PayLibre.Application.Fees;
 
-public sealed record FeeSpec(string Name, Guid FeeCategoryId, Guid ClassId, string? Session, string Term, long AmountKobo, DateTimeOffset DueDateUtc);
+public sealed record FeeSpec(string Name, Guid FeeCategoryId, Guid ClassId, string? Session, string Term, long AmountKobo, DateTimeOffset DueDateUtc, bool AppliesLateFee = true);
 
 /// <summary>A fee plus its rolled-up collection figures.</summary>
 public sealed record FeeStats(Fee Fee, string CategoryName, string ClassName, int Students, long InvoicedKobo, long CollectedKobo, long OutstandingKobo);
@@ -39,7 +39,7 @@ public sealed class FeeService(IApplicationDbContext db, ITenantContext tenant, 
         var session = string.IsNullOrWhiteSpace(spec.Session) ? klass.Session : spec.Session!.Trim();
 
         var now = clock.UtcNow;
-        var fee = new Fee(tenantId, name, spec.FeeCategoryId, klass.Id, session, term, spec.AmountKobo, spec.DueDateUtc);
+        var fee = new Fee(tenantId, name, spec.FeeCategoryId, klass.Id, session, term, spec.AmountKobo, spec.DueDateUtc, spec.AppliesLateFee);
         db.Fees.Add(fee);
 
         // Fan out one invoice per active student in the class.

@@ -19,6 +19,12 @@ public sealed record UpdateSettlementRequest(
     [Required, StringLength(16)] string BankCode,
     [Required, StringLength(20, MinimumLength = 6)] string AccountNumber);
 
+/// <summary>Set the school's late-fee policy. <c>LateFeeBps</c> is a percentage of the outstanding balance
+/// in basis points (500 = 5%); 0 disables late fees. <c>GraceDays</c> is days after due before it applies.</summary>
+public sealed record UpdateLateFeesRequest(
+    [Range(0, 10_000)] int LateFeeBps,
+    [Range(0, 365)] int GraceDays);
+
 public sealed record LoginRequest(
     [Required, EmailAddress] string Email,
     [Required] string Password);
@@ -47,7 +53,7 @@ public sealed record AuthSessionResponse(
 public sealed record SchoolResponse(
     Guid Id, string Name, string OfficialEmail, string Phone, string Status,
     string? SettlementBankName, string? SettlementAccountNumber, string? SettlementAccountName,
-    bool SettlementConfigured, string? JoinCode);
+    bool SettlementConfigured, int LateFeeBps, int LateFeeGraceDays, string? JoinCode);
 
 // ---- Parent self-enrolment (public, code-based) ----
 public sealed record EnrolContextClassResponse(Guid Id, string Name, string Session);
@@ -107,20 +113,22 @@ public sealed record CreateFeeRequest(
     [StringLength(40)] string? Session,
     [Required, RegularExpression("^(First|Second|Third)$", ErrorMessage = "Term must be First, Second, or Third.")] string Term,
     [Range(1, long.MaxValue)] long AmountKobo,
-    [Required] DateTimeOffset DueDateUtc);
+    [Required] DateTimeOffset DueDateUtc,
+    bool AppliesLateFee = true);
 
 /// <summary>A fee with its rolled-up collection figures (all money in kobo).</summary>
 public sealed record FeeResponse(
     Guid Id, string Name, Guid FeeCategoryId, string CategoryName, Guid ClassId, string ClassName,
     string Session, string Term, long AmountKobo, DateTimeOffset DueDateUtc,
-    int Students, long InvoicedKobo, long CollectedKobo, long OutstandingKobo);
+    int Students, long InvoicedKobo, long CollectedKobo, long OutstandingKobo, bool AppliesLateFee);
 
 public sealed record FeeSummaryResponse(long TotalInvoicedKobo, long CollectedKobo, long OutstandingKobo, int Fees, int Invoices);
 
 /// <summary>A single student's invoice for a fee.</summary>
 public sealed record StudentFeeResponse(
     Guid Id, Guid StudentId, string StudentName, string AdmissionNo, string ClassName,
-    long AmountKobo, long AmountPaidKobo, long OutstandingKobo, string Status, DateTimeOffset DueDateUtc);
+    long AmountKobo, long AmountPaidKobo, long OutstandingKobo, string Status, DateTimeOffset DueDateUtc,
+    long LateFeeAppliedKobo);
 
 public sealed record FeeDetailResponse(FeeResponse Fee, IReadOnlyList<StudentFeeResponse> Invoices);
 

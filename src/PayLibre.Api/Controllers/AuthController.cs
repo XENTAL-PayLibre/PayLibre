@@ -119,5 +119,6 @@ public sealed class AuthController(AuthService auth, SchoolService schools, Auth
 
     private static SchoolResponse ToSchool(School s) => new(
         s.Id, s.Name, s.OfficialEmail, s.Phone, s.Status.ToString(),
-        s.SettlementBankName, s.SettlementAccountNumber, s.SettlementAccountName, s.SettlementConfigured, s.JoinCode);
+        s.SettlementBankName, s.SettlementAccountNumber, s.SettlementAccountName, s.SettlementConfigured,
+        s.LateFeeBps, s.LateFeeGraceDays, s.JoinCode);
 }

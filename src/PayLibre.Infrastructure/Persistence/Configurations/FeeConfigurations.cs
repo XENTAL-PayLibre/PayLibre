@@ -46,6 +46,8 @@ public sealed class StudentFeeConfiguration : IEntityTypeConfiguration<StudentFe
         b.Property(x => x.AmountPaidKobo).IsRequired();
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(12).IsRequired();
         b.Property(x => x.DueDateUtc).IsRequired();
+        b.Property(x => x.LateFeeAppliedKobo).IsRequired();
+        b.Property(x => x.LastReminderStage).HasMaxLength(16);
         b.HasIndex(x => new { x.SchoolId, x.StudentId });
         b.HasIndex(x => new { x.FeeId });
         b.HasIndex(x => new { x.SchoolId, x.FeeId, x.StudentId }).IsUnique(); // one invoice per student per fee

@@ -55,4 +55,14 @@ public sealed class SchoolService(
         await db.SaveChangesAsync(ct);
         return school;
     }
+
+    /// <summary>Set the school's late-fee policy: a percentage (basis points) of the outstanding balance,
+    /// applied once a fee is overdue past <paramref name="graceDays"/>. <c>bps = 0</c> turns late fees off.</summary>
+    public async Task<School> UpdateLateFeesAsync(int bps, int graceDays, CancellationToken ct = default)
+    {
+        var school = await GetCurrentAsync(ct);
+        school.ConfigureLateFees(bps, graceDays);
+        await db.SaveChangesAsync(ct);
+        return school;
+    }
 }

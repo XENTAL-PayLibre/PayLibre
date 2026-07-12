@@ -111,6 +111,9 @@ builder.Services.AddCors(o => o.AddPolicy("frontend", p =>
 
 builder.Services.AddHealthChecks();
 
+// Background sweep: overdue late fees + fee reminders (config section "Maintenance").
+builder.Services.AddHostedService<PayLibre.Api.Maintenance.FeeMaintenanceWorker>();
+
 if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
 {
     builder.Services.AddOpenTelemetry()

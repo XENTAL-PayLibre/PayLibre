@@ -81,4 +81,10 @@ public interface INotificationSender
         string toName, string? email, string? phone, string studentName,
         long amountKobo, int invoicesSettled, long outstandingKobo, DateTimeOffset occurredAtUtc,
         CancellationToken ct = default);
+
+    /// <summary>Send a fee reminder (email + SMS) to a guardian. <paramref name="overdue"/> switches the
+    /// wording from "due soon" to "overdue". All amounts in kobo.</summary>
+    Task SendFeeReminderAsync(
+        string toName, string? email, string? phone, string studentName, string feeName,
+        long outstandingKobo, DateTimeOffset dueDateUtc, bool overdue, CancellationToken ct = default);
 }

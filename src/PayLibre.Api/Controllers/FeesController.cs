@@ -43,7 +43,7 @@ public sealed class FeesController(FeeService fees) : ControllerBase
         var className = invoices.FirstOrDefault()?.ClassName ?? "—";
         var header = new FeeResponse(fee.Id, fee.Name, fee.FeeCategoryId, "—", fee.ClassId, className,
             fee.Session, fee.Term.ToString(), fee.AmountKobo, fee.DueDateUtc,
-            invoices.Count, invoiced, collected, Math.Max(0, invoiced - collected));
+            invoices.Count, invoiced, collected, Math.Max(0, invoiced - collected), fee.AppliesLateFee);
         return Ok(new FeeDetailResponse(header, invoices.Select(ToInvoice).ToList()));
     }
 
@@ -73,9 +73,10 @@ public sealed class FeesController(FeeService fees) : ControllerBase
     private static FeeResponse ToResponse(FeeStats s) => new(
         s.Fee.Id, s.Fee.Name, s.Fee.FeeCategoryId, s.CategoryName, s.Fee.ClassId, s.ClassName,
         s.Fee.Session, s.Fee.Term.ToString(), s.Fee.AmountKobo, s.Fee.DueDateUtc,
-        s.Students, s.InvoicedKobo, s.CollectedKobo, s.OutstandingKobo);
+        s.Students, s.InvoicedKobo, s.CollectedKobo, s.OutstandingKobo, s.Fee.AppliesLateFee);
 
     private static StudentFeeResponse ToInvoice(StudentFeeRow r) => new(
         r.Invoice.Id, r.Invoice.StudentId, r.StudentName, r.AdmissionNo, r.ClassName,
-        r.Invoice.AmountKobo, r.Invoice.AmountPaidKobo, r.Invoice.OutstandingKobo, r.Invoice.Status.ToString(), r.Invoice.DueDateUtc);
+        r.Invoice.AmountKobo, r.Invoice.AmountPaidKobo, r.Invoice.OutstandingKobo, r.Invoice.Status.ToString(), r.Invoice.DueDateUtc,
+        r.Invoice.LateFeeAppliedKobo);
 }
