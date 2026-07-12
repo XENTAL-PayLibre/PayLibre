@@ -26,10 +26,16 @@ public sealed record ReceiptData(
 /// </summary>
 public sealed class ParentService(IApplicationDbContext db)
 {
+    /// <summary>Student ids linked to a parent via an additional-guardian record (multi-guardian).</summary>
+    private async Task<HashSet<Guid>> ExtraGuardianStudentIdsAsync(string email, CancellationToken ct) =>
+        (await db.StudentGuardians.IgnoreQueryFilters().Where(g => g.Email == email).Select(g => g.StudentId).ToListAsync(ct)).ToHashSet();
+
     public async Task<IReadOnlyList<ParentChild>> GetChildrenAsync(string parentEmail, CancellationToken ct = default)
     {
         var email = Norm(parentEmail);
-        var students = await db.Students.IgnoreQueryFilters().Where(s => s.GuardianEmail == email).ToListAsync(ct);
+        var extra = await ExtraGuardianStudentIdsAsync(email, ct);
+        var students = await db.Students.IgnoreQueryFilters()
+            .Where(s => s.GuardianEmail == email || extra.Contains(s.Id)).ToListAsync(ct);
         if (students.Count == 0) return Array.Empty<ParentChild>();
 
         var studentIds = students.Select(s => s.Id).ToList();
@@ -72,7 +78,8 @@ public sealed class ParentService(IApplicationDbContext db)
     public async Task<IReadOnlyList<ParentPaymentRow>> GetPaymentsAsync(string parentEmail, CancellationToken ct = default)
     {
         var email = Norm(parentEmail);
-        var students = await db.Students.IgnoreQueryFilters().Where(s => s.GuardianEmail == email)
+        var extra = await ExtraGuardianStudentIdsAsync(email, ct);
+        var students = await db.Students.IgnoreQueryFilters().Where(s => s.GuardianEmail == email || extra.Contains(s.Id))
             .ToDictionaryAsync(s => s.Id, s => s.FullName, ct);
         if (students.Count == 0) return Array.Empty<ParentPaymentRow>();
         var ids = students.Keys.ToList();
@@ -87,9 +94,9 @@ public sealed class ParentService(IApplicationDbContext db)
         var email = Norm(parentEmail);
         var payment = await db.Payments.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == paymentId, ct)
             ?? throw new NotFoundException("Payment not found.");
-        var student = await db.Students.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(s => s.Id == payment.StudentId && s.GuardianEmail == email, ct)
-            ?? throw new NotFoundException("Payment not found.");
+        var student = await db.Students.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == payment.StudentId, ct);
+        if (student is null || !await IsGuardianAsync(email, student, ct))
+            throw new NotFoundException("Payment not found.");
         var schoolName = await db.Schools.IgnoreQueryFilters()
             .Where(s => s.Id == payment.SchoolId).Select(s => s.Name).FirstOrDefaultAsync(ct) ?? "—";
         return new ReceiptData(schoolName, student.FullName, student.AdmissionNo, payment.AmountKobo,
@@ -99,9 +106,15 @@ public sealed class ParentService(IApplicationDbContext db)
     private async Task<Domain.Enrolment.Student> RequireOwnedStudentAsync(string parentEmail, Guid studentId, CancellationToken ct)
     {
         var email = Norm(parentEmail);
-        return await db.Students.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == studentId && s.GuardianEmail == email, ct)
-            ?? throw new NotFoundException("Student not found.");
+        var student = await db.Students.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == studentId, ct);
+        if (student is null || !await IsGuardianAsync(email, student, ct)) throw new NotFoundException("Student not found.");
+        return student;
     }
+
+    /// <summary>True if the parent email is the student's primary guardian or an additional guardian.</summary>
+    private async Task<bool> IsGuardianAsync(string email, Domain.Enrolment.Student student, CancellationToken ct) =>
+        student.GuardianEmail == email
+        || await db.StudentGuardians.IgnoreQueryFilters().AnyAsync(g => g.StudentId == student.Id && g.Email == email, ct);
 
     private static string Norm(string? email) => (email ?? string.Empty).Trim().ToLowerInvariant();
 }

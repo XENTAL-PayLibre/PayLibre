@@ -23,6 +23,7 @@ public sealed class PayLibreDbContext(
     public DbSet<LoginOtp> LoginOtps => Set<LoginOtp>();
     public DbSet<Class> Classes => Set<Class>();
     public DbSet<Student> Students => Set<Student>();
+    public DbSet<StudentGuardian> StudentGuardians => Set<StudentGuardian>();
     public DbSet<PayLibre.Domain.Fees.FeeCategory> FeeCategories => Set<PayLibre.Domain.Fees.FeeCategory>();
     public DbSet<PayLibre.Domain.Fees.Fee> Fees => Set<PayLibre.Domain.Fees.Fee>();
     public DbSet<PayLibre.Domain.Fees.StudentFee> StudentFees => Set<PayLibre.Domain.Fees.StudentFee>();
@@ -53,6 +54,7 @@ public sealed class PayLibreDbContext(
         modelBuilder.Entity<PasswordResetToken>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<Class>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<Student>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
+        modelBuilder.Entity<StudentGuardian>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<PayLibre.Domain.Fees.FeeCategory>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<PayLibre.Domain.Fees.Fee>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<PayLibre.Domain.Fees.StudentFee>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);

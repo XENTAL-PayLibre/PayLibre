@@ -151,3 +151,19 @@ public sealed class StudentConfiguration : IEntityTypeConfiguration<Student>
         b.HasOne<Class>().WithMany().HasForeignKey(x => x.ClassId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+public sealed class StudentGuardianConfiguration : IEntityTypeConfiguration<StudentGuardian>
+{
+    public void Configure(EntityTypeBuilder<StudentGuardian> b)
+    {
+        b.ToTable("student_guardians");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Email).HasMaxLength(320).IsRequired();
+        b.Property(x => x.Name).HasMaxLength(200);
+        b.Property(x => x.Phone).HasMaxLength(40);
+        b.HasIndex(x => x.Email);
+        b.HasIndex(x => new { x.StudentId, x.Email }).IsUnique();
+        b.HasOne<School>().WithMany().HasForeignKey(x => x.SchoolId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

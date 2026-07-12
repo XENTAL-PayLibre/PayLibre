@@ -21,6 +21,7 @@ public interface IApplicationDbContext
     DbSet<PasswordResetToken> PasswordResetTokens { get; }
     DbSet<Class> Classes { get; }
     DbSet<Student> Students { get; }
+    DbSet<StudentGuardian> StudentGuardians { get; }
     DbSet<FeeCategory> FeeCategories { get; }
     DbSet<Fee> Fees { get; }
     DbSet<StudentFee> StudentFees { get; }

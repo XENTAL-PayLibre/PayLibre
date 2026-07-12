@@ -94,6 +94,29 @@ public class ParentServiceTests
     }
 
     [Fact]
+    public async Task Additional_guardian_can_see_the_child()
+    {
+        using var db = new TestDb();
+        var x = new FakeXentalClient();
+        var studentId = await SeedChildWithFeeAsync(db, x); // primary guardian mum@x.com
+
+        // Staff add a second guardian.
+        await using (var ctx = db.CreateContext())
+            await new StudentService(ctx, db.Tenant, x, new FakeNotificationSender(), Opts)
+                .AddGuardianAsync(studentId, "dad@x.com", "Dad", null);
+
+        db.Tenant.TenantId = null; // parent API is global
+        await using (var ctx = db.CreateContext())
+        {
+            // Both guardians see the child.
+            (await new ParentService(ctx).GetChildrenAsync("mum@x.com")).Should().ContainSingle();
+            (await new ParentService(ctx).GetChildrenAsync("dad@x.com")).Should().ContainSingle();
+            // A stranger still sees nothing.
+            (await new ParentService(ctx).GetChildrenAsync("nobody@x.com")).Should().BeEmpty();
+        }
+    }
+
+    [Fact]
     public async Task Parent_login_is_two_step_and_requires_correct_password()
     {
         using var db = new TestDb();

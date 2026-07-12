@@ -62,6 +62,37 @@ public sealed class StudentService(
         return (existing, false);
     }
 
+    /// <summary>Add an additional guardian (multi-guardian). That guardian's parent account can then
+    /// view + pay for the student.</summary>
+    public async Task<StudentGuardian> AddGuardianAsync(Guid studentId, string email, string? name, string? phone, CancellationToken ct = default)
+    {
+        var tenantId = tenant.RequireTenantId();
+        var normalized = (email ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalized)) throw new ValidationException("A guardian email is required.");
+        if (!await db.Students.AnyAsync(s => s.Id == studentId, ct)) throw new NotFoundException("Student not found.");
+        if (await db.StudentGuardians.AnyAsync(g => g.StudentId == studentId && g.Email == normalized, ct))
+            throw new ConflictException("This guardian is already linked to the student.");
+        var guardian = new StudentGuardian(tenantId, studentId, normalized, name, phone);
+        db.StudentGuardians.Add(guardian);
+        await db.SaveChangesAsync(ct);
+        return guardian;
+    }
+
+    public async Task<IReadOnlyList<StudentGuardian>> ListGuardiansAsync(Guid studentId, CancellationToken ct = default)
+    {
+        _ = tenant.RequireTenantId();
+        return await db.StudentGuardians.AsNoTracking().Where(g => g.StudentId == studentId).ToListAsync(ct);
+    }
+
+    public async Task RemoveGuardianAsync(Guid guardianId, CancellationToken ct = default)
+    {
+        _ = tenant.RequireTenantId();
+        var g = await db.StudentGuardians.FirstOrDefaultAsync(x => x.Id == guardianId, ct)
+            ?? throw new NotFoundException("Guardian link not found.");
+        db.StudentGuardians.Remove(g);
+        await db.SaveChangesAsync(ct);
+    }
+
     /// <summary>A student (by admission number) plus their total outstanding fees (kobo).</summary>
     public async Task<(Student Student, long OutstandingKobo)> GetWithOutstandingAsync(string admissionNo, CancellationToken ct = default)
     {

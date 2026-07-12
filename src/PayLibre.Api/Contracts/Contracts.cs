@@ -143,6 +143,11 @@ public sealed record StudentResponse(
 
 public sealed record VirtualAccountResponse(string Nuban, string BankName, string AccountName);
 
+/// <summary>Add an additional guardian to a student (multi-guardian) — they can then view + pay.</summary>
+public sealed record AddGuardianRequest(
+    [Required, EmailAddress] string Email, [StringLength(200)] string? Name, [StringLength(40)] string? Phone);
+public sealed record GuardianResponse(Guid Id, Guid StudentId, string Email, string? Name, string? Phone);
+
 /// <summary>Term rollover: move the selected students to a target class (+ optional session override).</summary>
 public sealed record PromoteStudentsRequest(
     [Required, MinLength(1)] Guid[] StudentIds,

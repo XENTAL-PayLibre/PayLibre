@@ -18,8 +18,8 @@ public sealed class DisputeService(IApplicationDbContext db, ITenantContext tena
         if (string.IsNullOrWhiteSpace(reason)) throw new ValidationException("A reason is required.");
         var payment = await db.Payments.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == paymentId, ct)
             ?? throw new NotFoundException("Payment not found.");
-        var owns = await db.Students.IgnoreQueryFilters()
-            .AnyAsync(s => s.Id == payment.StudentId && s.GuardianEmail == email, ct);
+        var owns = await db.Students.IgnoreQueryFilters().AnyAsync(s => s.Id == payment.StudentId && s.GuardianEmail == email, ct)
+            || await db.StudentGuardians.IgnoreQueryFilters().AnyAsync(g => g.StudentId == payment.StudentId && g.Email == email, ct);
         if (!owns) throw new NotFoundException("Payment not found.");
 
         if (await db.PaymentDisputes.IgnoreQueryFilters().AnyAsync(d => d.PaymentId == paymentId && d.Status == DisputeStatus.Open, ct))

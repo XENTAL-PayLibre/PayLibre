@@ -123,6 +123,35 @@ public sealed class StudentsController(StudentService students) : ControllerBase
         return File(Encoding.UTF8.GetBytes(csv), "text/csv", "students.csv");
     }
 
+    /// <summary>List a student's additional guardians (multi-guardian).</summary>
+    [HttpGet("{id:guid}/guardians")]
+    [ProducesResponseType(typeof(IEnumerable<GuardianResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<GuardianResponse>>> Guardians(Guid id, CancellationToken ct) =>
+        Ok((await students.ListGuardiansAsync(id, ct)).Select(g => new GuardianResponse(g.Id, g.StudentId, g.Email, g.Name, g.Phone)));
+
+    /// <summary>Add an additional guardian to a student.</summary>
+    [HttpPost("{id:guid}/guardians")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
+    [ProducesResponseType(typeof(GuardianResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<GuardianResponse>> AddGuardian(Guid id, AddGuardianRequest request, CancellationToken ct)
+    {
+        var g = await students.AddGuardianAsync(id, request.Email, request.Name, request.Phone, ct);
+        return Created($"/api/v1/students/{id}/guardians", new GuardianResponse(g.Id, g.StudentId, g.Email, g.Name, g.Phone));
+    }
+
+    /// <summary>Remove an additional guardian.</summary>
+    [HttpDelete("guardians/{guardianId:guid}")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveGuardian(Guid guardianId, CancellationToken ct)
+    {
+        await students.RemoveGuardianAsync(guardianId, ct);
+        return NoContent();
+    }
+
     private static StudentResponse ToResponse(Student s) => new(
         s.Id, s.AdmissionNo, s.FullName, s.ClassId, s.Session,
         s.GuardianName, s.GuardianPhone, s.GuardianEmail, s.Status.ToString(),
