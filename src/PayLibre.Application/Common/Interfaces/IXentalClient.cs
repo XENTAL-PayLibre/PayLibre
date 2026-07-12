@@ -7,6 +7,8 @@ public sealed record XentalSubMerchant(Guid Id, string Reference, string Status,
 public sealed record XentalVirtualAccount(Guid Id, string AccountRef, string AccountNumber, string BankName, string AccountName);
 public sealed record XentalWebhookEndpoint(Guid Id, string Url, string? SigningSecret);
 public sealed record XentalBank(string Name, string Code);
+public sealed record XentalSubMerchantBalance(long CollectedKobo, long SettledKobo, long PendingKobo, int VirtualAccounts);
+public sealed record XentalRefundResult(string Status, string? TransferRef, long AmountKobo, string? ProviderReference);
 
 public interface IXentalClient
 {
@@ -30,4 +32,12 @@ public interface IXentalClient
 
     /// <summary>Name-enquiry: resolve the account holder name for a bank account.</summary>
     Task<string> LookupBankAccountAsync(string accountNumber, string bankCode, CancellationToken ct = default);
+
+    /// <summary>Collected / settled / pending balance for a school's sub-merchant (net kobo) — settlement report.</summary>
+    Task<XentalSubMerchantBalance> GetSubMerchantBalanceAsync(Guid subMerchantId, CancellationToken ct = default);
+
+    /// <summary>Refund a deposit's held surplus back to the payer (money-out). Idempotent per deposit reference.
+    /// Pass an explicit destination to override the original payer account.</summary>
+    Task<XentalRefundResult> RefundTransactionAsync(
+        string transactionRef, string? accountNumber, string? bankCode, string? accountName, CancellationToken ct = default);
 }

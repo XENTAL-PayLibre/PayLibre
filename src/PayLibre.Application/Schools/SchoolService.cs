@@ -7,6 +7,11 @@ using PayLibre.Domain.Schools;
 
 namespace PayLibre.Application.Schools;
 
+/// <summary>The school's settlement position at Xental (net kobo) + its configured payout account.</summary>
+public sealed record SettlementReport(
+    bool Configured, long CollectedKobo, long SettledKobo, long PendingKobo, int VirtualAccounts,
+    string? BankName, string? AccountNumber, string? AccountName);
+
 /// <summary>Reads/updates the current school's profile (tenant-scoped).</summary>
 public sealed class SchoolService(
     IApplicationDbContext db,
@@ -54,6 +59,24 @@ public sealed class SchoolService(
         school.SetSettlement(bankName, bankCode, accountNumber, sub.SettlementAccountName);
         await db.SaveChangesAsync(ct);
         return school;
+    }
+
+    /// <summary>The school's settlement position at Xental (collected/settled/pending) + its payout account.</summary>
+    public async Task<SettlementReport> GetSettlementReportAsync(CancellationToken ct = default)
+    {
+        var school = await GetCurrentAsync(ct);
+        if (school.XentalSubMerchantId is not Guid subId)
+            return new SettlementReport(false, 0, 0, 0, 0, null, null, null);
+
+        XentalSubMerchantBalance balance;
+        try { balance = await xental.GetSubMerchantBalanceAsync(subId, ct); }
+        catch (Exception ex) when (ex is not ValidationException)
+        {
+            throw new UpstreamException($"Could not read the settlement balance from the payment provider: {ex.Message}");
+        }
+        return new SettlementReport(
+            school.SettlementConfigured, balance.CollectedKobo, balance.SettledKobo, balance.PendingKobo,
+            balance.VirtualAccounts, school.SettlementBankName, school.SettlementAccountNumber, school.SettlementAccountName);
     }
 
     /// <summary>Set the school's late-fee policy: a percentage (basis points) of the outstanding balance,

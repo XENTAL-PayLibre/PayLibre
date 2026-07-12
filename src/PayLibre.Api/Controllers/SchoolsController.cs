@@ -24,6 +24,19 @@ public sealed class SchoolsController(SchoolService schools, AuditService audit)
     public async Task<ActionResult<SchoolResponse>> Current(CancellationToken ct) =>
         Ok(ToSchool(await schools.GetCurrentAsync(ct)));
 
+    /// <summary>Settlement position at the payment provider — collected / settled / pending (net kobo) —
+    /// plus the configured payout account.</summary>
+    [HttpGet("settlement-report")]
+    [Authorize(Policy = AuthPolicies.Dashboard)]
+    [ProducesResponseType(typeof(SettlementReportResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SettlementReportResponse>> SettlementReport(CancellationToken ct)
+    {
+        var r = await schools.GetSettlementReportAsync(ct);
+        return Ok(new SettlementReportResponse(
+            r.Configured, r.CollectedKobo, r.SettledKobo, r.PendingKobo, r.VirtualAccounts,
+            r.BankName, r.AccountNumber, r.AccountName));
+    }
+
     /// <summary>Set (or change) the school's payout account. Owner/Admin only. <c>bankName</c>/<c>bankCode</c>
     /// come from <c>GET /api/v1/banks</c>; the account name is resolved by the payment provider.</summary>
     [HttpPut("settlement")]

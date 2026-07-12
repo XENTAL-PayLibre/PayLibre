@@ -23,6 +23,7 @@ public interface IApplicationDbContext
     DbSet<StudentFee> StudentFees { get; }
     DbSet<Payment> Payments { get; }
     DbSet<FeeAllocation> FeeAllocations { get; }
+    DbSet<RefundRequest> RefundRequests { get; }
     DbSet<WebhookEvent> WebhookEvents { get; }
     DbSet<AuditEvent> AuditEvents { get; }
     DbSet<Parent> Parents { get; }

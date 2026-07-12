@@ -156,6 +156,21 @@ public sealed record ParentFeeResponse(
 public sealed record ParentPaymentDetailsResponse(string StudentName, string Nuban, string BankName, string AccountName, long OutstandingKobo);
 public sealed record ParentPaymentResponse(Guid Id, string StudentName, long AmountKobo, DateTimeOffset OccurredAtUtc);
 
+// ---- Settlement report ----
+/// <summary>The school's settlement position at the provider (net kobo) + its payout account.</summary>
+public sealed record SettlementReportResponse(
+    bool Configured, long CollectedKobo, long SettledKobo, long PendingKobo, int VirtualAccounts,
+    string? BankName, string? AccountNumber, string? AccountName);
+
+// ---- Refunds (dual-control) ----
+/// <summary>Request a refund of a received payment. A different Owner/Admin must approve it to execute.</summary>
+public sealed record CreateRefundRequest([Required] Guid PaymentId, [StringLength(500)] string? Reason);
+public sealed record RejectRefundRequest([StringLength(500)] string? Note);
+public sealed record RefundRequestResponse(
+    Guid Id, Guid PaymentId, string Status, string? RequestedByEmail, string? DecidedByEmail,
+    string? Reason, string? DecisionNote, long AmountKobo, string? FailureReason,
+    DateTimeOffset RequestedAtUtc, DateTimeOffset? DecidedAtUtc);
+
 // ---- Payments ----
 /// <summary>A reconciled payment received into a student's virtual account (all money in kobo).</summary>
 public sealed record PaymentResponse(

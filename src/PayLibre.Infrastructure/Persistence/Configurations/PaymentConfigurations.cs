@@ -23,6 +23,27 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
     }
 }
 
+public sealed class RefundRequestConfiguration : IEntityTypeConfiguration<RefundRequest>
+{
+    public void Configure(EntityTypeBuilder<RefundRequest> b)
+    {
+        b.ToTable("refund_requests");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.XentalTransactionRef).HasMaxLength(100).IsRequired();
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+        b.Property(x => x.RequestedByEmail).HasMaxLength(200);
+        b.Property(x => x.DecidedByEmail).HasMaxLength(200);
+        b.Property(x => x.Reason).HasMaxLength(500);
+        b.Property(x => x.DecisionNote).HasMaxLength(500);
+        b.Property(x => x.TransferRef).HasMaxLength(100);
+        b.Property(x => x.ProviderReference).HasMaxLength(100);
+        b.Property(x => x.FailureReason).HasMaxLength(1000);
+        b.HasIndex(x => new { x.SchoolId, x.PaymentId });
+        b.HasOne<School>().WithMany().HasForeignKey(x => x.SchoolId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne<Payment>().WithMany().HasForeignKey(x => x.PaymentId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
 {
     public void Configure(EntityTypeBuilder<WebhookEvent> b)

@@ -70,6 +70,20 @@ public sealed class FakeXentalClient : IXentalClient
 
     public Task<string> LookupBankAccountAsync(string accountNumber, string bankCode, CancellationToken ct = default)
         => Task.FromResult($"RESOLVED {accountNumber}");
+
+    public XentalSubMerchantBalance Balance { get; set; } = new(0, 0, 0, 0);
+    public Task<XentalSubMerchantBalance> GetSubMerchantBalanceAsync(Guid subMerchantId, CancellationToken ct = default)
+        => Task.FromResult(Balance);
+
+    public int RefundsIssued { get; private set; }
+    public string? LastRefundRef { get; private set; }
+    public long RefundAmountKobo { get; set; } = 5_000;
+    public Task<XentalRefundResult> RefundTransactionAsync(string transactionRef, string? accountNumber, string? bankCode, string? accountName, CancellationToken ct = default)
+    {
+        RefundsIssued++;
+        LastRefundRef = transactionRef;
+        return Task.FromResult(new XentalRefundResult("sent", $"tr_{transactionRef}", RefundAmountKobo, "prov_ref"));
+    }
 }
 
 public sealed class FakeNotificationSender : INotificationSender

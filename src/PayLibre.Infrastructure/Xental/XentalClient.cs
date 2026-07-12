@@ -76,6 +76,28 @@ public sealed class XentalClient(HttpClient http, IOptions<XentalOptions> option
         return GetString(res, "accountName") ?? throw Bad("bank lookup: missing accountName");
     }
 
+    public async Task<XentalSubMerchantBalance> GetSubMerchantBalanceAsync(Guid subMerchantId, CancellationToken ct = default)
+    {
+        var res = await SendAsync(HttpMethod.Get, $"/api/v1/sub-merchants/{subMerchantId}/balance", null, ct);
+        return new XentalSubMerchantBalance(
+            GetLong(res, "collectedKobo"), GetLong(res, "settledKobo"), GetLong(res, "pendingKobo"),
+            (int)GetLong(res, "virtualAccounts"));
+    }
+
+    public async Task<XentalRefundResult> RefundTransactionAsync(
+        string transactionRef, string? accountNumber, string? bankCode, string? accountName, CancellationToken ct = default)
+    {
+        object? body = accountNumber is null && bankCode is null && accountName is null
+            ? null
+            : new { accountNumber, bankCode, accountName };
+        var res = await SendAsync(HttpMethod.Post, $"/api/v1/transactions/{transactionRef}/refund", body, ct);
+        return new XentalRefundResult(
+            GetString(res, "status") ?? "unknown",
+            GetString(res, "transferRef"),
+            GetLong(res, "amountKobo"),
+            GetString(res, "providerReference"));
+    }
+
     // ---- HTTP + auth plumbing ------------------------------------------------
 
     private async Task<JsonElement> SendAsync(HttpMethod method, string path, object? body, CancellationToken ct)
@@ -134,6 +156,9 @@ public sealed class XentalClient(HttpClient http, IOptions<XentalOptions> option
     private static string? GetString(JsonElement e, string name) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String
             ? v.GetString() : null;
+
+    private static long GetLong(JsonElement e, string name) =>
+        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.TryGetInt64(out var l) ? l : 0;
 
     private static Guid GetGuid(JsonElement e, string name) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && Guid.TryParse(v.GetString(), out var g)

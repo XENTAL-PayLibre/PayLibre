@@ -172,5 +172,9 @@ public class AuthServiceTests
             => throw new UpstreamException("boom");
         public Task<string> LookupBankAccountAsync(string a, string b, CancellationToken ct = default)
             => throw new UpstreamException("boom");
+        public Task<PayLibre.Application.Common.Interfaces.XentalSubMerchantBalance> GetSubMerchantBalanceAsync(Guid id, CancellationToken ct = default)
+            => throw new UpstreamException("boom");
+        public Task<PayLibre.Application.Common.Interfaces.XentalRefundResult> RefundTransactionAsync(string r, string? a, string? b, string? n, CancellationToken ct = default)
+            => throw new UpstreamException("boom");
     }
 }
