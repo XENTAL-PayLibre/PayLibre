@@ -74,6 +74,20 @@ public sealed class SchoolUserClassConfiguration : IEntityTypeConfiguration<Scho
     }
 }
 
+public sealed class DeviceTokenConfiguration : IEntityTypeConfiguration<PayLibre.Domain.Parents.DeviceToken>
+{
+    public void Configure(EntityTypeBuilder<PayLibre.Domain.Parents.DeviceToken> b)
+    {
+        b.ToTable("device_tokens");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.ParentEmail).HasMaxLength(320).IsRequired();
+        b.Property(x => x.Token).HasMaxLength(512).IsRequired();
+        b.Property(x => x.Platform).HasMaxLength(16).IsRequired();
+        b.HasIndex(x => x.ParentEmail);
+        b.HasIndex(x => x.Token).IsUnique();
+    }
+}
+
 public sealed class ParentConfiguration : IEntityTypeConfiguration<PayLibre.Domain.Parents.Parent>
 {
     public void Configure(EntityTypeBuilder<PayLibre.Domain.Parents.Parent> b)

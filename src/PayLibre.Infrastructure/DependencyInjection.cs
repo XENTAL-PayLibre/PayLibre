@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.Configure<Notifications.ResendOptions>(configuration.GetSection(Notifications.ResendOptions.SectionName));
         services.Configure<Notifications.SmsOptions>(configuration.GetSection(Notifications.SmsOptions.SectionName));
         services.Configure<Maintenance.MaintenanceOptions>(configuration.GetSection(Maintenance.MaintenanceOptions.SectionName));
+        services.Configure<Notifications.PushOptions>(configuration.GetSection(Notifications.PushOptions.SectionName));
 
         // Persistence (Postgres). The DbContext also serves as IApplicationDbContext.
         var connectionString = configuration.GetConnectionString("Default");
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddHttpClient(); // used by the notification sender (Resend/Termii/Twilio) + outbound webhooks
         services.AddScoped<INotificationSender, NotificationSender>();
         services.AddScoped<IOutboundWebhookSender, Webhooks.OutboundWebhookSender>();
+        services.AddScoped<IPushSender, Notifications.FcmPushSender>();
 
         // Xental integration — the only external dependency.
         services.AddHttpClient<IXentalClient, XentalClient>((sp, http) =>

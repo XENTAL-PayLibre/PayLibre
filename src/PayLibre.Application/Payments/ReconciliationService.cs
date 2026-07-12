@@ -16,7 +16,7 @@ public sealed record DepositResult(string Status, Guid? PaymentId, int InvoicesS
 /// </summary>
 public sealed class ReconciliationService(
     IApplicationDbContext db, IClock clock, INotificationSender notifier,
-    Webhooks.OutboundWebhookService? outbound = null)
+    Webhooks.OutboundWebhookService? outbound = null, Parents.PushService? push = null)
 {
     public async Task<DepositResult> ProcessDepositAsync(
         string accountRef, long amountKobo, long netCreditKobo, string xentalRef, string? payerName,
@@ -81,6 +81,22 @@ public sealed class ReconciliationService(
                     transactionRef = xentalRef,
                     occurredAtUtc = occurredAt,
                 }, ct);
+            }
+            catch { /* best-effort */ }
+        }
+
+        // Push the guardian(s) — best-effort, config-gated (no-op until FCM is configured).
+        if (push is not null)
+        {
+            try
+            {
+                var emails = new List<string>();
+                if (!string.IsNullOrWhiteSpace(student.GuardianEmail)) emails.Add(student.GuardianEmail!);
+                emails.AddRange(await db.StudentGuardians.IgnoreQueryFilters()
+                    .Where(g => g.StudentId == student.Id).Select(g => g.Email).ToListAsync(ct));
+                await push.NotifyAsync(emails,
+                    $"Payment received for {student.FullName}",
+                    $"₦{(amountKobo / 100m):N2} received. Outstanding: ₦{(outstanding / 100m):N2}.", ct);
             }
             catch { /* best-effort */ }
         }

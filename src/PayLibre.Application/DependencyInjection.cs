@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<Dashboard.DashboardService>();
         services.AddScoped<Parents.ParentAuthService>();
         services.AddScoped<Parents.ParentService>();
+        services.AddScoped<Parents.PushService>();
         services.AddScoped<Maintenance.LateFeeService>();
         services.AddScoped<Maintenance.ReminderService>();
         return services;

@@ -18,7 +18,7 @@ namespace PayLibre.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/parent")]
-public sealed class ParentController(ParentAuthService auth, ParentService parents, DisputeService disputes) : ControllerBase
+public sealed class ParentController(ParentAuthService auth, ParentService parents, DisputeService disputes, PushService push) : ControllerBase
 {
     /// <summary>Create a parent account. Returns a bearer access token.</summary>
     [HttpPost("auth/register")]
@@ -143,6 +143,26 @@ public sealed class ParentController(ParentAuthService auth, ParentService paren
     public async Task<IActionResult> DeleteMyAccount(CancellationToken ct)
     {
         await parents.DeleteAccountAsync(Email(), ct);
+        return NoContent();
+    }
+
+    /// <summary>Register this device for push notifications.</summary>
+    [HttpPost("devices")]
+    [Authorize(Policy = AuthPolicies.Parent)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RegisterDevice(RegisterDeviceRequest request, CancellationToken ct)
+    {
+        await push.RegisterDeviceAsync(Email(), request.Token, request.Platform ?? "unknown", ct);
+        return NoContent();
+    }
+
+    /// <summary>Unregister a device token (e.g. on sign-out).</summary>
+    [HttpDelete("devices")]
+    [Authorize(Policy = AuthPolicies.Parent)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> UnregisterDevice([FromQuery] string token, CancellationToken ct)
+    {
+        await push.UnregisterDeviceAsync(Email(), token, ct);
         return NoContent();
     }
 

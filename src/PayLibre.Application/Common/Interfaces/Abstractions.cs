@@ -36,12 +36,20 @@ public interface IApplicationDbContext
     DbSet<AuditEvent> AuditEvents { get; }
     DbSet<ApiKey> ApiKeys { get; }
     DbSet<Parent> Parents { get; }
+    DbSet<DeviceToken> DeviceTokens { get; }
     DbSet<LoginOtp> LoginOtps { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>Resolves the current tenant (school) from the authenticated request.</summary>
+/// <summary>Sends a push notification to device tokens (FCM; implemented in Infrastructure). Config-gated —
+/// a no-op that logs when push credentials aren't set.</summary>
+public interface IPushSender
+{
+    Task SendAsync(IReadOnlyList<string> deviceTokens, string title, string body, CancellationToken ct = default);
+}
+
 /// <summary>Delivers a signed outbound webhook to a school endpoint (implemented in Infrastructure).</summary>
 public interface IOutboundWebhookSender
 {

@@ -88,6 +88,20 @@ public sealed class FakeXentalClient : IXentalClient
     }
 }
 
+public sealed class FakePushSender : IPushSender
+{
+    public int Sends { get; private set; }
+    public int LastTokenCount { get; private set; }
+    public string? LastTitle { get; private set; }
+    public Task SendAsync(IReadOnlyList<string> deviceTokens, string title, string body, CancellationToken ct = default)
+    {
+        Sends++;
+        LastTokenCount = deviceTokens.Count;
+        LastTitle = title;
+        return Task.CompletedTask;
+    }
+}
+
 public sealed class FakeOutboundWebhookSender : IOutboundWebhookSender
 {
     public bool Succeed { get; set; } = true;

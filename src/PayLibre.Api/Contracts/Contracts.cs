@@ -219,6 +219,11 @@ public sealed record ParentFeeResponse(
 public sealed record ParentPaymentDetailsResponse(string StudentName, string Nuban, string BankName, string AccountName, long OutstandingKobo);
 public sealed record ParentPaymentResponse(Guid Id, string StudentName, long AmountKobo, DateTimeOffset OccurredAtUtc);
 
+/// <summary>Register a push device token for the parent app.</summary>
+public sealed record RegisterDeviceRequest(
+    [Required, StringLength(512, MinimumLength = 8)] string Token,
+    [RegularExpression("^(ios|android|web)$", ErrorMessage = "Platform must be ios, android, or web.")] string? Platform);
+
 // ---- Disputes ----
 /// <summary>Parent raises a dispute about a payment (mis-attributed / missing / wrong amount).</summary>
 public sealed record RaiseDisputeRequest([Required, StringLength(1000, MinimumLength = 3)] string Reason);

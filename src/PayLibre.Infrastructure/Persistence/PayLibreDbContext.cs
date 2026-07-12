@@ -38,6 +38,7 @@ public sealed class PayLibreDbContext(
     public DbSet<PayLibre.Domain.Webhooks.WebhookSubscription> WebhookSubscriptions => Set<PayLibre.Domain.Webhooks.WebhookSubscription>();
     public DbSet<PayLibre.Domain.Webhooks.WebhookDelivery> WebhookDeliveries => Set<PayLibre.Domain.Webhooks.WebhookDelivery>();
     public DbSet<PayLibre.Domain.Parents.Parent> Parents => Set<PayLibre.Domain.Parents.Parent>();
+    public DbSet<PayLibre.Domain.Parents.DeviceToken> DeviceTokens => Set<PayLibre.Domain.Parents.DeviceToken>();
 
     // Evaluated per query against the current request's tenant. Guid.Empty (no tenant) matches no
     // rows → deny by default. Registration/login bypass this with IgnoreQueryFilters().
