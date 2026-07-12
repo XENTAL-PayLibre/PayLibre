@@ -6,6 +6,7 @@ using PayLibre.Api.Authorization;
 using PayLibre.Api.Contracts;
 using PayLibre.Application.Common.Exceptions;
 using PayLibre.Application.Parents;
+using PayLibre.Application.Payments;
 
 namespace PayLibre.Api.Controllers;
 
@@ -17,7 +18,7 @@ namespace PayLibre.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/parent")]
-public sealed class ParentController(ParentAuthService auth, ParentService parents) : ControllerBase
+public sealed class ParentController(ParentAuthService auth, ParentService parents, DisputeService disputes) : ControllerBase
 {
     /// <summary>Create a parent account. Returns a bearer access token.</summary>
     [HttpPost("auth/register")]
@@ -87,6 +88,46 @@ public sealed class ParentController(ParentAuthService auth, ParentService paren
     [ProducesResponseType(typeof(IEnumerable<ParentPaymentResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<ParentPaymentResponse>>> Payments(CancellationToken ct) =>
         Ok((await parents.GetPaymentsAsync(Email(), ct)).Select(p => new ParentPaymentResponse(p.Id, p.StudentName, p.AmountKobo, p.OccurredAtUtc)));
+
+    /// <summary>Download a receipt for one of your children's payments (printable HTML).</summary>
+    [HttpGet("payments/{paymentId:guid}/receipt")]
+    [Authorize(Policy = AuthPolicies.Parent)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Receipt(Guid paymentId, CancellationToken ct)
+    {
+        var r = await parents.GetReceiptAsync(Email(), paymentId, ct);
+        string N(long k) => "₦" + (k / 100m).ToString("N2");
+        var html = $"""
+            <!doctype html><html><head><meta charset="utf-8"><title>Receipt {r.Reference}</title></head>
+            <body style="font-family:system-ui,Arial,sans-serif;max-width:520px;margin:40px auto;color:#111">
+            <h2 style="margin:0">{System.Net.WebUtility.HtmlEncode(r.SchoolName)}</h2>
+            <p style="color:#666;margin:.2em 0 1.5em">Payment receipt</p>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:6px 0;color:#666">Student</td><td style="text-align:right">{System.Net.WebUtility.HtmlEncode(r.StudentName)} ({System.Net.WebUtility.HtmlEncode(r.AdmissionNo)})</td></tr>
+              <tr><td style="padding:6px 0;color:#666">Amount</td><td style="text-align:right"><b>{N(r.AmountKobo)}</b></td></tr>
+              <tr><td style="padding:6px 0;color:#666">Date</td><td style="text-align:right">{r.OccurredAtUtc:dd MMM yyyy, HH:mm} UTC</td></tr>
+              <tr><td style="padding:6px 0;color:#666">Payer</td><td style="text-align:right">{System.Net.WebUtility.HtmlEncode(r.PayerName ?? "—")}</td></tr>
+              <tr><td style="padding:6px 0;color:#666">Reference</td><td style="text-align:right;font-family:monospace">{System.Net.WebUtility.HtmlEncode(r.Reference)}</td></tr>
+            </table>
+            <p style="color:#999;font-size:12px;margin-top:2em">Powered by PayLibre</p>
+            </body></html>
+            """;
+        return Content(html, "text/html");
+    }
+
+    /// <summary>Raise a dispute about one of your children's payments (goes to the school's queue).</summary>
+    [HttpPost("payments/{paymentId:guid}/dispute")]
+    [Authorize(Policy = AuthPolicies.Parent)]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Dispute(Guid paymentId, RaiseDisputeRequest request, CancellationToken ct)
+    {
+        var d = await disputes.RaiseAsync(Email(), paymentId, request.Reason, ct);
+        return Created($"/api/v1/disputes/{d.Id}", new { d.Id, status = d.Status.ToString() });
+    }
 
     private string Email() =>
         User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value

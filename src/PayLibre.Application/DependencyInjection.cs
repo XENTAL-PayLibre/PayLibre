@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<Payments.ReconciliationService>();
         services.AddScoped<Payments.WebhookService>();
         services.AddScoped<Payments.RefundService>();
+        services.AddScoped<Payments.DisputeService>();
         services.AddScoped<Payments.PaymentService>();
         services.AddScoped<Webhooks.OutboundWebhookService>();
         services.AddScoped<Dashboard.DashboardService>();

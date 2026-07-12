@@ -44,6 +44,24 @@ public sealed class RefundRequestConfiguration : IEntityTypeConfiguration<Refund
     }
 }
 
+public sealed class PaymentDisputeConfiguration : IEntityTypeConfiguration<PaymentDispute>
+{
+    public void Configure(EntityTypeBuilder<PaymentDispute> b)
+    {
+        b.ToTable("payment_disputes");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.RaisedByEmail).HasMaxLength(320).IsRequired();
+        b.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+        b.Property(x => x.Resolution).HasMaxLength(1000);
+        b.Property(x => x.ResolvedByEmail).HasMaxLength(320);
+        b.HasIndex(x => new { x.SchoolId, x.Status });
+        b.HasIndex(x => x.PaymentId);
+        b.HasOne<School>().WithMany().HasForeignKey(x => x.SchoolId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne<Payment>().WithMany().HasForeignKey(x => x.PaymentId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
 {
     public void Configure(EntityTypeBuilder<WebhookEvent> b)

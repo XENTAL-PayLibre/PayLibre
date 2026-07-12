@@ -27,6 +27,7 @@ public interface IApplicationDbContext
     DbSet<Payment> Payments { get; }
     DbSet<FeeAllocation> FeeAllocations { get; }
     DbSet<RefundRequest> RefundRequests { get; }
+    DbSet<PaymentDispute> PaymentDisputes { get; }
     DbSet<WebhookEvent> WebhookEvents { get; }
     DbSet<WebhookSubscription> WebhookSubscriptions { get; }
     DbSet<WebhookDelivery> WebhookDeliveries { get; }

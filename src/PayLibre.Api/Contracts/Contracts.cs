@@ -210,6 +210,15 @@ public sealed record ParentFeeResponse(
 public sealed record ParentPaymentDetailsResponse(string StudentName, string Nuban, string BankName, string AccountName, long OutstandingKobo);
 public sealed record ParentPaymentResponse(Guid Id, string StudentName, long AmountKobo, DateTimeOffset OccurredAtUtc);
 
+// ---- Disputes ----
+/// <summary>Parent raises a dispute about a payment (mis-attributed / missing / wrong amount).</summary>
+public sealed record RaiseDisputeRequest([Required, StringLength(1000, MinimumLength = 3)] string Reason);
+/// <summary>Staff resolve a dispute: accept (valid) or reject, with an optional note.</summary>
+public sealed record ResolveDisputeRequest([Required] bool Accepted, [StringLength(1000)] string? Resolution);
+public sealed record DisputeResponse(
+    Guid Id, Guid PaymentId, string Status, string RaisedByEmail, string Reason,
+    string? Resolution, string? ResolvedByEmail, DateTimeOffset RaisedAtUtc, DateTimeOffset? ResolvedAtUtc);
+
 // ---- Settlement report ----
 /// <summary>The school's settlement position at the provider (net kobo) + its payout account.</summary>
 public sealed record SettlementReportResponse(

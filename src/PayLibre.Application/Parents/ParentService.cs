@@ -16,6 +16,10 @@ public sealed record ParentPaymentRow(Guid Id, string StudentName, long AmountKo
 
 public sealed record ParentPaymentDetails(string StudentName, string Nuban, string BankName, string AccountName, long OutstandingKobo);
 
+public sealed record ReceiptData(
+    string SchoolName, string StudentName, string AdmissionNo, long AmountKobo, long NetCreditKobo,
+    string? PayerName, string Reference, DateTimeOffset OccurredAtUtc);
+
 /// <summary>
 /// Read API for the parent app. A parent sees only children whose guardian email matches their
 /// account email. Global (children may span schools), so it bypasses the tenant filter deliberately.
@@ -75,6 +79,21 @@ public sealed class ParentService(IApplicationDbContext db)
         var payments = await db.Payments.IgnoreQueryFilters().Where(p => ids.Contains(p.StudentId)).ToListAsync(ct);
         return payments.OrderByDescending(p => p.OccurredAtUtc)
             .Select(p => new ParentPaymentRow(p.Id, students.GetValueOrDefault(p.StudentId, "—"), p.AmountKobo, p.OccurredAtUtc)).ToList();
+    }
+
+    /// <summary>A receipt for one of the parent's children's payments (parent must own the student).</summary>
+    public async Task<ReceiptData> GetReceiptAsync(string parentEmail, Guid paymentId, CancellationToken ct = default)
+    {
+        var email = Norm(parentEmail);
+        var payment = await db.Payments.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == paymentId, ct)
+            ?? throw new NotFoundException("Payment not found.");
+        var student = await db.Students.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(s => s.Id == payment.StudentId && s.GuardianEmail == email, ct)
+            ?? throw new NotFoundException("Payment not found.");
+        var schoolName = await db.Schools.IgnoreQueryFilters()
+            .Where(s => s.Id == payment.SchoolId).Select(s => s.Name).FirstOrDefaultAsync(ct) ?? "—";
+        return new ReceiptData(schoolName, student.FullName, student.AdmissionNo, payment.AmountKobo,
+            payment.NetCreditKobo, payment.PayerName, payment.XentalTransactionRef, payment.OccurredAtUtc);
     }
 
     private async Task<Domain.Enrolment.Student> RequireOwnedStudentAsync(string parentEmail, Guid studentId, CancellationToken ct)
