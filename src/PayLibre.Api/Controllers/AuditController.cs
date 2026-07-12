@@ -17,7 +17,7 @@ public sealed class AuditController(AuditService audit) : ControllerBase
 {
     /// <summary>Most-recent audit events first. <c>take</c> caps the page size (default 100, max 500).</summary>
     [HttpGet]
-    [Authorize(Policy = AuthPolicies.ManageSchool)]
+    [Authorize(Policy = AuthPolicies.ViewAudit)]
     [ProducesResponseType(typeof(IEnumerable<AuditEventResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<AuditEventResponse>>> List([FromQuery] int take = 100, CancellationToken ct = default) =>
         Ok((await audit.ListAsync(take, ct)).Select(e => new AuditEventResponse(

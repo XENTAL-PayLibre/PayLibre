@@ -82,6 +82,14 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Dashboard)
         .RequireClaim(AuthPolicies.RoleClaim, "Owner", "Admin"));
+    options.AddPolicy(AuthPolicies.StaffWrite, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Dashboard)
+        .RequireClaim(AuthPolicies.RoleClaim, "Owner", "Admin", "Bursar"));
+    options.AddPolicy(AuthPolicies.ViewAudit, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Dashboard)
+        .RequireClaim(AuthPolicies.RoleClaim, "Owner", "Admin", "Auditor"));
     options.AddPolicy(AuthPolicies.Parent, policy => policy
         .RequireAuthenticatedUser()
         .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Parent));

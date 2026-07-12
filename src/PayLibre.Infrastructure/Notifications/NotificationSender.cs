@@ -103,6 +103,15 @@ public sealed class NotificationSender(
         if (!string.IsNullOrWhiteSpace(phone)) await SendSmsAsync(phone!, text, ct);
     }
 
+    public async Task SendStaffInviteAsync(string toEmail, string schoolName, string role, string inviteUrl, CancellationToken ct = default)
+    {
+        var html = $"<p>You've been invited to join <b>{schoolName}</b> on PayLibre as <b>{role}</b>.</p>"
+            + $"<p>Accept the invitation and set your password:</p><p><a href=\"{inviteUrl}\">{inviteUrl}</a></p>"
+            + "<p>This link expires soon. If you weren't expecting this, ignore this email.</p>";
+        logger.LogInformation("Staff invite for {Email} to {School} as {Role}", toEmail, schoolName, role);
+        await SendEmailAsync(toEmail, $"You're invited to {schoolName} on PayLibre", html, ct);
+    }
+
     public async Task SendPasswordResetAsync(string toEmail, string resetUrl, CancellationToken ct = default)
     {
         var html = $"<p>Reset your PayLibre password using the link below (valid for a short time):</p>"

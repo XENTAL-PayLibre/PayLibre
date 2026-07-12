@@ -30,6 +30,7 @@ public sealed class StudentsController(StudentService students) : ControllerBase
 
     /// <summary>Create a student — provisions a dedicated virtual account automatically.</summary>
     [HttpPost]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(typeof(StudentResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<StudentResponse>> Create(CreateStudentRequest request, CancellationToken ct)
     {
@@ -41,6 +42,7 @@ public sealed class StudentsController(StudentService students) : ControllerBase
 
     /// <summary>Update a student's details (name, class, guardian). Does not re-provision the account.</summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(typeof(StudentResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<StudentResponse>> Update(Guid id, CreateStudentRequest request, CancellationToken ct) =>
         Ok(ToResponse(await students.UpdateAsync(id, new StudentInput(
@@ -49,6 +51,7 @@ public sealed class StudentsController(StudentService students) : ControllerBase
 
     /// <summary>Delete a student.</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
@@ -68,6 +71,7 @@ public sealed class StudentsController(StudentService students) : ControllerBase
 
     /// <summary>Send the account details to the guardian (SMS/email).</summary>
     [HttpPost("{id:guid}/virtual-account/send")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SendDetails(Guid id, CancellationToken ct)
     {
@@ -78,6 +82,7 @@ public sealed class StudentsController(StudentService students) : ControllerBase
     /// <summary>Bulk-create students from a CSV file (multipart form field "file").
     /// Header: AdmissionNo,FullName,Class,Session,GuardianName,GuardianPhone,GuardianEmail.</summary>
     [HttpPost("import")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [RequestSizeLimit(5_000_000)]
     [ProducesResponseType(typeof(ImportResultResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ImportResultResponse>> Import(IFormFile file, CancellationToken ct)

@@ -68,6 +68,16 @@ public sealed record SelfEnrolRequest(
 
 public sealed record MeResponse(Guid UserId, string Email, string Role, SchoolResponse School);
 
+// ---- Team / invites ----
+/// <summary>Invite a staff member. <c>Role</c> is one of Admin, Bursar, Accountant, Auditor (not Owner).</summary>
+public sealed record CreateInviteRequest(
+    [Required, EmailAddress] string Email,
+    [Required, RegularExpression("^(Admin|Bursar|Accountant|Auditor)$", ErrorMessage = "Role must be Admin, Bursar, Accountant, or Auditor.")] string Role);
+/// <summary>Accept a staff invitation (from the emailed link) and set a password. Then sign in normally.</summary>
+public sealed record AcceptInviteRequest([Required] string Token, [Required, StringLength(200, MinimumLength = 8)] string Password);
+public sealed record InviteResponse(
+    Guid Id, string Email, string Role, DateTimeOffset ExpiresAtUtc, DateTimeOffset? AcceptedAtUtc, string? InvitedByEmail);
+
 // ---- Audit trail ----
 /// <summary>One entry in the school's audit trail (who did what, when).</summary>
 public sealed record AuditEventResponse(

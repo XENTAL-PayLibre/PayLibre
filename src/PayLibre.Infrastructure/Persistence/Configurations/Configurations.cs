@@ -43,6 +43,22 @@ public sealed class SchoolUserConfiguration : IEntityTypeConfiguration<SchoolUse
     }
 }
 
+public sealed class InviteConfiguration : IEntityTypeConfiguration<Invite>
+{
+    public void Configure(EntityTypeBuilder<Invite> b)
+    {
+        b.ToTable("invites");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Email).HasMaxLength(320).IsRequired();
+        b.Property(x => x.Role).HasConversion<string>().HasMaxLength(16).IsRequired();
+        b.Property(x => x.TokenHash).HasMaxLength(100).IsRequired();
+        b.Property(x => x.InvitedByEmail).HasMaxLength(320);
+        b.HasIndex(x => x.TokenHash);
+        b.HasIndex(x => new { x.SchoolId, x.Email });
+        b.HasOne<School>().WithMany().HasForeignKey(x => x.SchoolId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public sealed class ParentConfiguration : IEntityTypeConfiguration<PayLibre.Domain.Parents.Parent>
 {
     public void Configure(EntityTypeBuilder<PayLibre.Domain.Parents.Parent> b)

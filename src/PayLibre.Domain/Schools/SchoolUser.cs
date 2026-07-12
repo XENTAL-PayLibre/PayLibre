@@ -2,7 +2,14 @@ using PayLibre.Domain.Common;
 
 namespace PayLibre.Domain.Schools;
 
-public enum SchoolRole { Owner = 1, Admin = 2, Bursar = 3 }
+public enum SchoolRole
+{
+    Owner = 1,       // full control (registered the school)
+    Admin = 2,       // manage school + write
+    Bursar = 3,      // day-to-day write (fees, students, reminders)
+    Accountant = 4,  // read-only (finance oversight)
+    Auditor = 5,     // read-only + audit trail
+}
 
 /// <summary>A dashboard user for a school. The owner is created at registration.</summary>
 public sealed class SchoolUser : BaseEntity, ITenantOwned

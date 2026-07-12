@@ -21,6 +21,7 @@ public sealed class FeeCategoriesController(FeeCategoryService categories) : Con
 
     /// <summary>Create a fee category.</summary>
     [HttpPost]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(typeof(FeeCategoryResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<FeeCategoryResponse>> Create(FeeCategoryRequest request, CancellationToken ct)
@@ -31,6 +32,7 @@ public sealed class FeeCategoriesController(FeeCategoryService categories) : Con
 
     /// <summary>Rename a fee category.</summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(typeof(FeeCategoryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FeeCategoryResponse>> Update(Guid id, FeeCategoryRequest request, CancellationToken ct) =>
@@ -38,6 +40,7 @@ public sealed class FeeCategoriesController(FeeCategoryService categories) : Con
 
     /// <summary>Delete a fee category (only if no fees use it).</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)

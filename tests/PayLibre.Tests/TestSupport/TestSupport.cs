@@ -130,6 +130,17 @@ public sealed class FakeNotificationSender : INotificationSender
         LastReminderFee = feeName;
         return Task.CompletedTask;
     }
+
+    public int Invites { get; private set; }
+    public string? LastInviteEmail { get; private set; }
+    public string? LastInviteUrl { get; private set; }
+    public Task SendStaffInviteAsync(string toEmail, string schoolName, string role, string inviteUrl, CancellationToken ct = default)
+    {
+        Invites++;
+        LastInviteEmail = toEmail;
+        LastInviteUrl = inviteUrl;
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>SQLite in-memory database shared across contexts for one test.</summary>

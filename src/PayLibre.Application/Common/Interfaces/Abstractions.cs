@@ -14,6 +14,7 @@ public interface IApplicationDbContext
 {
     DbSet<School> Schools { get; }
     DbSet<SchoolUser> SchoolUsers { get; }
+    DbSet<Invite> Invites { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<PasswordResetToken> PasswordResetTokens { get; }
     DbSet<Class> Classes { get; }
@@ -96,4 +97,7 @@ public interface INotificationSender
     Task SendFeeReminderAsync(
         string toName, string? email, string? phone, string studentName, string feeName,
         long outstandingKobo, DateTimeOffset dueDateUtc, bool overdue, CancellationToken ct = default);
+
+    /// <summary>Email a staff invitation link to join a school with a given role.</summary>
+    Task SendStaffInviteAsync(string toEmail, string schoolName, string role, string inviteUrl, CancellationToken ct = default);
 }

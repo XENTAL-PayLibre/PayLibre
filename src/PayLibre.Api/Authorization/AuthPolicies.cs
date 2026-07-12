@@ -12,6 +12,13 @@ public static class AuthPolicies
     /// <summary>Owner/Admin only (settlement + destructive settings).</summary>
     public const string ManageSchool = "manage-school";
 
+    /// <summary>Write access to day-to-day data (fees, students, classes): Owner/Admin/Bursar.
+    /// Excludes read-only roles (Accountant, Auditor).</summary>
+    public const string StaffWrite = "staff-write";
+
+    /// <summary>View the audit trail: Owner/Admin/Auditor.</summary>
+    public const string ViewAudit = "view-audit";
+
     /// <summary>Parent-app account (mobile).</summary>
     public const string Parent = "parent";
 }

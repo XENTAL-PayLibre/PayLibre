@@ -50,6 +50,7 @@ public sealed class FeesController(FeeService fees, AuditService audit) : Contro
 
     /// <summary>Create a fee (fans out invoices to the class's active students).</summary>
     [HttpPost]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(typeof(FeeResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<FeeResponse>> Create(CreateFeeRequest request, CancellationToken ct)
@@ -65,6 +66,7 @@ public sealed class FeesController(FeeService fees, AuditService audit) : Contro
 
     /// <summary>Delete a fee and its invoices (only if none have payments).</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)

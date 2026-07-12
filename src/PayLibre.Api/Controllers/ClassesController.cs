@@ -27,6 +27,7 @@ public sealed class ClassesController(ClassService classes) : ControllerBase
 
     /// <summary>Create a class (name + academic session). Names are unique per session.</summary>
     [HttpPost]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(typeof(ClassResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ClassResponse>> Create(ClassRequest request, CancellationToken ct)
@@ -37,12 +38,14 @@ public sealed class ClassesController(ClassService classes) : ControllerBase
 
     /// <summary>Rename a class or change its session.</summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(typeof(ClassResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ClassResponse>> Update(Guid id, ClassRequest request, CancellationToken ct) =>
         Ok(ToResponse(await classes.UpdateAsync(id, new ClassInput(request.Name, request.Session), ct)));
 
     /// <summary>Delete a class (only if it has no students).</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)

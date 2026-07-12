@@ -17,6 +17,7 @@ public sealed class PayLibreDbContext(
 
     public DbSet<School> Schools => Set<School>();
     public DbSet<SchoolUser> SchoolUsers => Set<SchoolUser>();
+    public DbSet<Invite> Invites => Set<Invite>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<LoginOtp> LoginOtps => Set<LoginOtp>();
@@ -43,6 +44,7 @@ public sealed class PayLibreDbContext(
         // Row-level tenant isolation.
         modelBuilder.Entity<School>().HasQueryFilter(e => e.Id == CurrentTenantId);
         modelBuilder.Entity<SchoolUser>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
+        modelBuilder.Entity<Invite>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<RefreshToken>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<PasswordResetToken>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<Class>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);

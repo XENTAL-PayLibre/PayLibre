@@ -17,6 +17,9 @@ public sealed class PayLibreOptions
     /// <summary>Minutes a password-reset link stays valid.</summary>
     public int PasswordResetTtlMinutes { get; set; } = 30;
 
+    /// <summary>Hours a staff invitation link stays valid.</summary>
+    public int InviteTtlHours { get; set; } = 72;
+
     /// <summary>Frontend base URL, used to build password-reset links (e.g. https://app.paylibre.xental.online).</summary>
     public string FrontendUrl { get; set; } = "";
 }
