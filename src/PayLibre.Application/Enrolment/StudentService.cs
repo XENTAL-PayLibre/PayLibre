@@ -44,6 +44,65 @@ public sealed class StudentService(
             ?? throw new NotFoundException($"Student '{id}' not found.");
     }
 
+    /// <summary>Term rollover: move the given students into a target class (+ session). Returns the count moved.</summary>
+    public async Task<int> PromoteAsync(IReadOnlyList<Guid> studentIds, Guid toClassId, string? session, CancellationToken ct = default)
+    {
+        _ = tenant.RequireTenantId();
+        if (studentIds is null || studentIds.Count == 0) throw new ValidationException("Select at least one student.");
+        var klass = await db.Classes.FirstOrDefaultAsync(c => c.Id == toClassId, ct)
+            ?? throw new ValidationException("The target class does not exist.");
+        var newSession = string.IsNullOrWhiteSpace(session) ? klass.Session : session!.Trim();
+
+        var students = await db.Students.Where(s => studentIds.Contains(s.Id)).ToListAsync(ct);
+        foreach (var s in students) s.Promote(klass.Id, newSession);
+        await db.SaveChangesAsync(ct);
+        return students.Count;
+    }
+
+    /// <summary>Bulk activate/deactivate students. Returns the count updated.</summary>
+    public async Task<int> BulkSetStatusAsync(IReadOnlyList<Guid> studentIds, StudentStatus status, CancellationToken ct = default)
+    {
+        _ = tenant.RequireTenantId();
+        if (studentIds is null || studentIds.Count == 0) throw new ValidationException("Select at least one student.");
+        var students = await db.Students.Where(s => studentIds.Contains(s.Id)).ToListAsync(ct);
+        foreach (var s in students)
+        {
+            if (status == StudentStatus.Inactive) s.Deactivate(); else s.Reactivate();
+        }
+        await db.SaveChangesAsync(ct);
+        return students.Count;
+    }
+
+    /// <summary>Export students as CSV (roster + account + guardian). Tenant-scoped.</summary>
+    public async Task<string> ExportCsvAsync(CancellationToken ct = default)
+    {
+        _ = tenant.RequireTenantId();
+        var students = (await db.Students.AsNoTracking().ToListAsync(ct))
+            .OrderBy(s => s.FullName).ToList();
+        var classNames = await db.Classes.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name, ct);
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("AdmissionNo,FullName,Class,Session,Status,GuardianName,GuardianEmail,GuardianPhone,Nuban,BankName");
+        foreach (var s in students)
+        {
+            var cls = classNames.TryGetValue(s.ClassId, out var n) ? n : "";
+            sb.AppendLine(string.Join(",", new[]
+            {
+                Csv(s.AdmissionNo), Csv(s.FullName), Csv(cls), Csv(s.Session), Csv(s.Status.ToString()),
+                Csv(s.GuardianName), Csv(s.GuardianEmail), Csv(s.GuardianPhone), Csv(s.Nuban), Csv(s.BankName),
+            }));
+        }
+        return sb.ToString();
+    }
+
+    private static string Csv(string? v)
+    {
+        v ??= "";
+        return v.Contains(',') || v.Contains('"') || v.Contains('\n')
+            ? "\"" + v.Replace("\"", "\"\"") + "\""
+            : v;
+    }
+
     public async Task<Student> CreateAsync(StudentInput input, CancellationToken ct = default)
     {
         var tenantId = tenant.RequireTenantId();

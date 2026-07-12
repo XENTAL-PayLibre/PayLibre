@@ -78,4 +78,14 @@ public sealed class Student : BaseEntity, ITenantOwned
     }
 
     public void Deactivate() => Status = StudentStatus.Inactive;
+    public void Reactivate() => Status = StudentStatus.Active;
+
+    /// <summary>Move the student to a new class + session (term rollover). Keeps everything else.</summary>
+    public void Promote(Guid classId, string session)
+    {
+        if (classId == Guid.Empty) throw new DomainException("A class is required.");
+        ClassId = classId;
+        Session = DomainException.Require(session, nameof(session));
+        Status = StudentStatus.Active;
+    }
 }

@@ -95,6 +95,34 @@ public sealed class StudentsController(StudentService students) : ControllerBase
             result.Errors.Select(e => new ImportErrorResponse(e.Row, e.Message)).ToList()));
     }
 
+    /// <summary>Term rollover: move the selected students into a target class (+ optional session).</summary>
+    [HttpPost("promote")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
+    [ProducesResponseType(typeof(BulkResultResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<BulkResultResponse>> Promote(PromoteStudentsRequest request, CancellationToken ct) =>
+        Ok(new BulkResultResponse(await students.PromoteAsync(request.StudentIds, request.ToClassId, request.Session, ct)));
+
+    /// <summary>Bulk activate/deactivate students.</summary>
+    [HttpPost("bulk-status")]
+    [Authorize(Policy = AuthPolicies.StaffWrite)]
+    [ProducesResponseType(typeof(BulkResultResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<BulkResultResponse>> BulkStatus(BulkStatusRequest request, CancellationToken ct)
+    {
+        var status = Enum.Parse<StudentStatus>(request.Status, ignoreCase: true);
+        return Ok(new BulkResultResponse(await students.BulkSetStatusAsync(request.StudentIds, status, ct)));
+    }
+
+    /// <summary>Export the student roster as a CSV file.</summary>
+    [HttpGet("export")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Export(CancellationToken ct)
+    {
+        var csv = await students.ExportCsvAsync(ct);
+        return File(Encoding.UTF8.GetBytes(csv), "text/csv", "students.csv");
+    }
+
     private static StudentResponse ToResponse(Student s) => new(
         s.Id, s.AdmissionNo, s.FullName, s.ClassId, s.Session,
         s.GuardianName, s.GuardianPhone, s.GuardianEmail, s.Status.ToString(),

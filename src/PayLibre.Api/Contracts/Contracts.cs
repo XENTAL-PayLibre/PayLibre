@@ -110,6 +110,17 @@ public sealed record StudentResponse(
 
 public sealed record VirtualAccountResponse(string Nuban, string BankName, string AccountName);
 
+/// <summary>Term rollover: move the selected students to a target class (+ optional session override).</summary>
+public sealed record PromoteStudentsRequest(
+    [Required, MinLength(1)] Guid[] StudentIds,
+    [Required] Guid ToClassId,
+    [StringLength(40)] string? Session);
+/// <summary>Bulk activate/deactivate students.</summary>
+public sealed record BulkStatusRequest(
+    [Required, MinLength(1)] Guid[] StudentIds,
+    [Required, RegularExpression("^(Active|Inactive)$", ErrorMessage = "Status must be Active or Inactive.")] string Status);
+public sealed record BulkResultResponse(int Affected);
+
 public sealed record ImportResultResponse(int Created, int Failed, IReadOnlyList<ImportErrorResponse> Errors);
 public sealed record ImportErrorResponse(int Row, string Message);
 
