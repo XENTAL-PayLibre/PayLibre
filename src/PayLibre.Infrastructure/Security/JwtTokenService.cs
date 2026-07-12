@@ -16,14 +16,21 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, IClock clock) 
     public const string ParentScope = "parent";
     private readonly JwtOptions _options = options.Value;
 
-    public AccessToken IssueAccessToken(SchoolUser user) => Issue(new List<Claim>
+    public AccessToken IssueAccessToken(SchoolUser user, IReadOnlyList<Guid>? assignedClassIds = null)
     {
-        new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-        new("tenant_id", user.SchoolId.ToString()),
-        new("scope", DashboardScope),
-        new("role", user.Role.ToString()),
-        new(JwtRegisteredClaimNames.Email, user.Email),
-    });
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new("tenant_id", user.SchoolId.ToString()),
+            new("scope", DashboardScope),
+            new("role", user.Role.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+        };
+        if (assignedClassIds is not null)
+            foreach (var classId in assignedClassIds)
+                claims.Add(new Claim("class", classId.ToString()));
+        return Issue(claims);
+    }
 
     public AccessToken IssueParentToken(Parent parent) => Issue(new List<Claim>
     {

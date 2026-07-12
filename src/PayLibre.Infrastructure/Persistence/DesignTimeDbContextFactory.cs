@@ -21,6 +21,8 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Pay
         public Guid RequireTenantId() => throw new InvalidOperationException();
         public Guid? UserId => null;
         public string? UserEmail => null;
+        public string? Role => null;
+        public IReadOnlyList<Guid> AssignedClassIds => Array.Empty<Guid>();
     }
 
     private sealed class NoClock : IClock

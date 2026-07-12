@@ -18,6 +18,8 @@ public sealed class FakeTenantContext : ITenantContext
     public Guid RequireTenantId() => TenantId ?? throw new InvalidOperationException("No tenant set.");
     public Guid? UserId { get; set; }
     public string? UserEmail { get; set; }
+    public string? Role { get; set; }
+    public IReadOnlyList<Guid> AssignedClassIds { get; set; } = Array.Empty<Guid>();
 }
 
 /// <summary>Fast, deterministic password hasher for tests (no BCrypt cost).</summary>
@@ -29,7 +31,7 @@ public sealed class FakePasswordHasher : IPasswordHasher
 
 public sealed class FakeTokenService : ITokenService
 {
-    public AccessToken IssueAccessToken(SchoolUser user) =>
+    public AccessToken IssueAccessToken(SchoolUser user, IReadOnlyList<Guid>? assignedClassIds = null) =>
         new($"token-{user.Id:N}", DateTimeOffset.UtcNow.AddMinutes(15));
     public AccessToken IssueParentToken(PayLibre.Domain.Parents.Parent parent) =>
         new($"ptoken-{parent.Id:N}", DateTimeOffset.UtcNow.AddMinutes(60));

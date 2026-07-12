@@ -16,6 +16,7 @@ public interface IApplicationDbContext
 {
     DbSet<School> Schools { get; }
     DbSet<SchoolUser> SchoolUsers { get; }
+    DbSet<SchoolUserClass> SchoolUserClasses { get; }
     DbSet<Invite> Invites { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<PasswordResetToken> PasswordResetTokens { get; }
@@ -59,6 +60,12 @@ public interface ITenantContext
 
     /// <summary>The current dashboard user's email, if present on the token (for audit attribution).</summary>
     string? UserEmail { get; }
+
+    /// <summary>The current user's role (from the token), e.g. "Owner", "ClassTeacher". Null for API keys.</summary>
+    string? Role { get; }
+
+    /// <summary>For a ClassTeacher, the class ids they may access (from the token). Empty otherwise.</summary>
+    IReadOnlyList<Guid> AssignedClassIds { get; }
 }
 
 /// <summary>Testable wall clock.</summary>
@@ -80,7 +87,7 @@ public sealed record AccessToken(string Token, DateTimeOffset ExpiresAt);
 /// <summary>Issues signed access tokens for the dashboard (school users) and the parent app.</summary>
 public interface ITokenService
 {
-    AccessToken IssueAccessToken(SchoolUser user);
+    AccessToken IssueAccessToken(SchoolUser user, IReadOnlyList<Guid>? assignedClassIds = null);
     AccessToken IssueParentToken(Parent parent);
 }
 

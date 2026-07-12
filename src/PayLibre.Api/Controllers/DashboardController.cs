@@ -9,7 +9,7 @@ namespace PayLibre.Api.Controllers;
 /// <summary>Dashboard overview + collection reports for the school (all money in kobo).</summary>
 [ApiController]
 [Route("api/v1")]
-[Authorize(Policy = AuthPolicies.Dashboard)]
+[Authorize(Policy = AuthPolicies.StaffRead)] // school-wide financials; ClassTeacher is scoped elsewhere
 public sealed class DashboardController(DashboardService dashboard) : ControllerBase
 {
     /// <summary>Headline metrics: students, invoiced/collected/outstanding, collection rate,

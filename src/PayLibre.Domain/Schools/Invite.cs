@@ -19,9 +19,12 @@ public sealed class Invite : BaseEntity, ITenantOwned
     public string? InvitedByEmail { get; private set; }
     public DateTimeOffset? AcceptedAtUtc { get; private set; }
 
+    /// <summary>Comma-separated class ids to assign on acceptance (ClassTeacher only); empty otherwise.</summary>
+    public string? ClassIdsCsv { get; private set; }
+
     private Invite() { }
 
-    public Invite(Guid schoolId, string email, SchoolRole role, string tokenHash, DateTimeOffset expiresAtUtc, string? invitedByEmail)
+    public Invite(Guid schoolId, string email, SchoolRole role, string tokenHash, DateTimeOffset expiresAtUtc, string? invitedByEmail, IEnumerable<Guid>? classIds = null)
     {
         SchoolId = schoolId;
         Email = DomainException.Require(email, nameof(email)).Trim().ToLowerInvariant();
@@ -29,7 +32,15 @@ public sealed class Invite : BaseEntity, ITenantOwned
         TokenHash = DomainException.Require(tokenHash, nameof(tokenHash));
         ExpiresAtUtc = expiresAtUtc;
         InvitedByEmail = string.IsNullOrWhiteSpace(invitedByEmail) ? null : invitedByEmail.Trim();
+        var ids = (classIds ?? Enumerable.Empty<Guid>()).Where(id => id != Guid.Empty).Distinct().ToList();
+        ClassIdsCsv = ids.Count > 0 ? string.Join(",", ids) : null;
     }
+
+    public IReadOnlyList<Guid> ClassIds() =>
+        string.IsNullOrWhiteSpace(ClassIdsCsv)
+            ? Array.Empty<Guid>()
+            : ClassIdsCsv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(Guid.Parse).ToList();
 
     public bool IsRedeemable(DateTimeOffset now) => AcceptedAtUtc is null && ExpiresAtUtc > now;
 

@@ -180,7 +180,12 @@ public sealed class AuthService(
 
     private async Task<IssuedSession> IssueSessionAsync(SchoolUser user, School school, CancellationToken ct)
     {
-        var access = tokens.IssueAccessToken(user);
+        // A class teacher's token carries their assigned class ids so data access can be scoped statelessly.
+        IReadOnlyList<Guid>? classIds = null;
+        if (user.Role == SchoolRole.ClassTeacher)
+            classIds = await db.SchoolUserClasses.IgnoreQueryFilters()
+                .Where(uc => uc.SchoolUserId == user.Id).Select(uc => uc.ClassId).ToListAsync(ct);
+        var access = tokens.IssueAccessToken(user, classIds);
         var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
             .Replace('+', '-').Replace('/', '_').TrimEnd('=');
         var expires = clock.UtcNow.AddDays(_options.RefreshTokenDays);

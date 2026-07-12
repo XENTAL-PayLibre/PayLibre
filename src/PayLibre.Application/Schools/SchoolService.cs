@@ -88,4 +88,25 @@ public sealed class SchoolService(
         await db.SaveChangesAsync(ct);
         return school;
     }
+
+    /// <summary>Replace a class teacher's assigned classes. Takes effect on their next sign-in (the class
+    /// ids are carried in the session token).</summary>
+    public async Task<int> SetUserClassesAsync(Guid userId, IReadOnlyList<Guid> classIds, CancellationToken ct = default)
+    {
+        var schoolId = tenant.RequireTenantId();
+        var user = await db.SchoolUsers.FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new NotFoundException("User not found.");
+        if (user.Role != SchoolRole.ClassTeacher)
+            throw new ValidationException("Only a class teacher has class assignments.");
+        var ids = (classIds ?? Array.Empty<Guid>()).Where(id => id != Guid.Empty).Distinct().ToList();
+        if (ids.Count == 0) throw new ValidationException("Assign at least one class.");
+        if (await db.Classes.CountAsync(c => ids.Contains(c.Id), ct) != ids.Count)
+            throw new ValidationException("One or more classes do not exist.");
+
+        var existing = await db.SchoolUserClasses.Where(uc => uc.SchoolUserId == userId).ToListAsync(ct);
+        db.SchoolUserClasses.RemoveRange(existing);
+        foreach (var id in ids) db.SchoolUserClasses.Add(new SchoolUserClass(schoolId, userId, id));
+        await db.SaveChangesAsync(ct);
+        return ids.Count;
+    }
 }

@@ -28,20 +28,27 @@ public sealed class StudentService(
 {
     private readonly PayLibreOptions _options = options.Value;
 
+    // A class teacher only sees students in their assigned classes.
+    private bool IsClassTeacher => string.Equals(tenant.Role, "ClassTeacher", StringComparison.Ordinal);
+
     public async Task<IReadOnlyList<Student>> ListAsync(Guid? classId, StudentStatus? status, CancellationToken ct = default)
     {
         _ = tenant.RequireTenantId();
         var q = db.Students.AsNoTracking().AsQueryable();
         if (classId is Guid cid) q = q.Where(s => s.ClassId == cid);
         if (status is StudentStatus st) q = q.Where(s => s.Status == st);
+        if (IsClassTeacher) { var scope = tenant.AssignedClassIds; q = q.Where(s => scope.Contains(s.ClassId)); }
         return await q.OrderBy(s => s.FullName).ToListAsync(ct);
     }
 
     public async Task<Student> GetAsync(Guid id, CancellationToken ct = default)
     {
         _ = tenant.RequireTenantId();
-        return await db.Students.FirstOrDefaultAsync(s => s.Id == id, ct)
+        var student = await db.Students.FirstOrDefaultAsync(s => s.Id == id, ct)
             ?? throw new NotFoundException($"Student '{id}' not found.");
+        if (IsClassTeacher && !tenant.AssignedClassIds.Contains(student.ClassId))
+            throw new NotFoundException($"Student '{id}' not found.");
+        return student;
     }
 
     /// <summary>Create or update a student keyed by admission number (public-API sync). New students are

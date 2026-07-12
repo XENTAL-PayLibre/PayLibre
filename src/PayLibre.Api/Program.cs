@@ -93,6 +93,10 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Dashboard)
         .RequireClaim(AuthPolicies.RoleClaim, "Owner", "Admin", "Auditor"));
+    options.AddPolicy(AuthPolicies.StaffRead, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Dashboard)
+        .RequireClaim(AuthPolicies.RoleClaim, "Owner", "Admin", "Bursar", "Accountant", "Auditor"));
     // Public-API scope policies (API-key scheme). Each requires the matching granted scope.
     options.AddPolicy("api:students:read", p => p.AddAuthenticationSchemes(PayLibre.Api.Auth.ApiKeyAuthenticationHandler.SchemeName)
         .RequireAuthenticatedUser().RequireClaim(PayLibre.Api.Auth.ApiKeyAuthenticationHandler.ScopeClaim, "students:read"));

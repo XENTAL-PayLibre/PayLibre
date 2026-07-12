@@ -102,10 +102,14 @@ public sealed record PublicStudentResponse(
     string? Nuban, string? BankName, string? AccountName);
 
 // ---- Team / invites ----
-/// <summary>Invite a staff member. <c>Role</c> is one of Admin, Bursar, Accountant, Auditor (not Owner).</summary>
+/// <summary>Invite a staff member. <c>Role</c> is Admin, Bursar, Accountant, Auditor, or ClassTeacher (not
+/// Owner). <c>ClassIds</c> is required for ClassTeacher (the classes they may access) and ignored otherwise.</summary>
 public sealed record CreateInviteRequest(
     [Required, EmailAddress] string Email,
-    [Required, RegularExpression("^(Admin|Bursar|Accountant|Auditor)$", ErrorMessage = "Role must be Admin, Bursar, Accountant, or Auditor.")] string Role);
+    [Required, RegularExpression("^(Admin|Bursar|Accountant|Auditor|ClassTeacher)$", ErrorMessage = "Role must be Admin, Bursar, Accountant, Auditor, or ClassTeacher.")] string Role,
+    Guid[]? ClassIds);
+/// <summary>Replace a class teacher's assigned classes (takes effect on their next sign-in).</summary>
+public sealed record SetUserClassesRequest([Required] Guid[] ClassIds);
 /// <summary>Accept a staff invitation (from the emailed link) and set a password. Then sign in normally.</summary>
 public sealed record AcceptInviteRequest([Required] string Token, [Required, StringLength(200, MinimumLength = 8)] string Password);
 public sealed record InviteResponse(

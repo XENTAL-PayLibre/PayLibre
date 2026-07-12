@@ -9,6 +9,7 @@ public enum SchoolRole
     Bursar = 3,      // day-to-day write (fees, students, reminders)
     Accountant = 4,  // read-only (finance oversight)
     Auditor = 5,     // read-only + audit trail
+    ClassTeacher = 6, // read-only, scoped to their assigned class(es)
 }
 
 /// <summary>A dashboard user for a school. The owner is created at registration.</summary>

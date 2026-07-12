@@ -32,4 +32,12 @@ public sealed class TenantContext(IHttpContextAccessor accessor) : ITenantContex
     public string? UserEmail =>
         accessor.HttpContext?.User.FindFirst(ClaimTypes.Email)?.Value
         ?? accessor.HttpContext?.User.FindFirst("email")?.Value;
+
+    public string? Role => accessor.HttpContext?.User.FindFirst("role")?.Value;
+
+    public IReadOnlyList<Guid> AssignedClassIds =>
+        accessor.HttpContext?.User.FindAll("class")
+            .Select(c => Guid.TryParse(c.Value, out var g) ? g : Guid.Empty)
+            .Where(g => g != Guid.Empty).ToList()
+        ?? (IReadOnlyList<Guid>)Array.Empty<Guid>();
 }

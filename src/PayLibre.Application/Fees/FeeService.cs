@@ -53,10 +53,14 @@ public sealed class FeeService(IApplicationDbContext db, ITenantContext tenant, 
         return (fee, students.Count);
     }
 
+    // A class teacher only sees fees for their assigned classes.
+    private bool IsClassTeacher => string.Equals(tenant.Role, "ClassTeacher", StringComparison.Ordinal);
+
     public async Task<IReadOnlyList<FeeStats>> ListAsync(CancellationToken ct = default)
     {
         _ = tenant.RequireTenantId();
         var fees = (await db.Fees.AsNoTracking().ToListAsync(ct)).OrderByDescending(f => f.CreatedAtUtc).ToList();
+        if (IsClassTeacher) { var scope = tenant.AssignedClassIds; fees = fees.Where(f => scope.Contains(f.ClassId)).ToList(); }
         var categories = await db.FeeCategories.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name, ct);
         var classes = await db.Classes.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name, ct);
         var agg = await db.StudentFees.AsNoTracking()
@@ -79,6 +83,8 @@ public sealed class FeeService(IApplicationDbContext db, ITenantContext tenant, 
         _ = tenant.RequireTenantId();
         var fee = await db.Fees.AsNoTracking().FirstOrDefaultAsync(f => f.Id == id, ct)
             ?? throw new NotFoundException($"Fee '{id}' not found.");
+        if (IsClassTeacher && !tenant.AssignedClassIds.Contains(fee.ClassId))
+            throw new NotFoundException($"Fee '{id}' not found.");
         var invoices = await db.StudentFees.AsNoTracking().Where(sf => sf.FeeId == id).ToListAsync(ct);
         var studentIds = invoices.Select(i => i.StudentId).ToList();
         var students = await db.Students.AsNoTracking().Where(s => studentIds.Contains(s.Id)).ToListAsync(ct);
@@ -98,6 +104,15 @@ public sealed class FeeService(IApplicationDbContext db, ITenantContext tenant, 
     public async Task<FeeSummary> SummaryAsync(CancellationToken ct = default)
     {
         _ = tenant.RequireTenantId();
+        if (IsClassTeacher)
+        {
+            var scope = tenant.AssignedClassIds;
+            var feeIds = await db.Fees.Where(f => scope.Contains(f.ClassId)).Select(f => f.Id).ToListAsync(ct);
+            var invs = await db.StudentFees.Where(sf => feeIds.Contains(sf.FeeId)).ToListAsync(ct);
+            var inv = invs.Sum(x => x.AmountKobo);
+            var col = invs.Sum(x => x.AmountPaidKobo);
+            return new FeeSummary(inv, col, Math.Max(0, inv - col), feeIds.Count, invs.Count);
+        }
         var fees = await db.Fees.CountAsync(ct);
         var invoiced = await db.StudentFees.SumAsync(x => (long?)x.AmountKobo, ct) ?? 0;
         var collected = await db.StudentFees.SumAsync(x => (long?)x.AmountPaidKobo, ct) ?? 0;

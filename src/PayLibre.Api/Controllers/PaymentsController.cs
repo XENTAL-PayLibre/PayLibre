@@ -9,7 +9,7 @@ namespace PayLibre.Api.Controllers;
 /// <summary>Payments received into students' virtual accounts (reconciled by Xental).</summary>
 [ApiController]
 [Route("api/v1/payments")]
-[Authorize(Policy = AuthPolicies.Dashboard)]
+[Authorize(Policy = AuthPolicies.StaffRead)] // school-wide payments; ClassTeacher excluded
 public sealed class PaymentsController(PaymentService payments) : ControllerBase
 {
     /// <summary>List received payments, most recent first. Optionally filter by student.</summary>

@@ -19,6 +19,10 @@ public static class AuthPolicies
     /// <summary>View the audit trail: Owner/Admin/Auditor.</summary>
     public const string ViewAudit = "view-audit";
 
+    /// <summary>School-wide financial reads (dashboard, reports, payments): every role EXCEPT ClassTeacher,
+    /// whose access is scoped to their own classes.</summary>
+    public const string StaffRead = "staff-read";
+
     /// <summary>Parent-app account (mobile).</summary>
     public const string Parent = "parent";
 }

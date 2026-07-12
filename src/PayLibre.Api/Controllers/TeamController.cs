@@ -34,7 +34,7 @@ public sealed class TeamController(InviteService invites, AuditService audit) : 
     public async Task<ActionResult<InviteResponse>> CreateInvite(CreateInviteRequest request, CancellationToken ct)
     {
         var role = Enum.Parse<SchoolRole>(request.Role, ignoreCase: true);
-        var invite = await invites.CreateAsync(request.Email, role, ct);
+        var invite = await invites.CreateAsync(request.Email, role, request.ClassIds, ct);
         await audit.RecordAsync("user.invited", "Invite", invite.Id, $"Invited {invite.Email} as {invite.Role}.", ct);
         return Created($"/api/v1/team/invites/{invite.Id}", ToResponse(invite));
     }

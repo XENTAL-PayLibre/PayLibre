@@ -65,6 +65,19 @@ public sealed class SchoolsController(SchoolService schools, AuditService audit)
         return Ok(ToSchool(school));
     }
 
+    /// <summary>Replace a class teacher's assigned classes (Owner/Admin). Effective on their next sign-in.</summary>
+    [HttpPut("users/{userId:guid}/classes")]
+    [Authorize(Policy = AuthPolicies.ManageSchool)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> SetUserClasses(Guid userId, SetUserClassesRequest request, CancellationToken ct)
+    {
+        var count = await schools.SetUserClassesAsync(userId, request.ClassIds, ct);
+        await audit.RecordAsync("user.classes_updated", "SchoolUser", userId, $"Set {count} class assignment(s).", ct);
+        return Ok(new { assigned = count });
+    }
+
     private static SchoolResponse ToSchool(School s) => new(
         s.Id, s.Name, s.OfficialEmail, s.Phone, s.Status.ToString(),
         s.SettlementBankName, s.SettlementAccountNumber, s.SettlementAccountName, s.SettlementConfigured,

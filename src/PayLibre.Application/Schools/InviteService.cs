@@ -20,12 +20,24 @@ public sealed class InviteService(
 {
     private readonly PayLibreOptions _options = options.Value;
 
-    public async Task<Invite> CreateAsync(string email, SchoolRole role, CancellationToken ct = default)
+    public async Task<Invite> CreateAsync(string email, SchoolRole role, IReadOnlyList<Guid>? classIds = null, CancellationToken ct = default)
     {
         var schoolId = tenant.RequireTenantId();
         email = (email ?? string.Empty).Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(email)) throw new ValidationException("An email is required.");
         if (role == SchoolRole.Owner) throw new ValidationException("An Owner cannot be invited.");
+
+        classIds = (classIds ?? Array.Empty<Guid>()).Where(id => id != Guid.Empty).Distinct().ToList();
+        if (role == SchoolRole.ClassTeacher)
+        {
+            if (classIds.Count == 0) throw new ValidationException("A class teacher must be assigned at least one class.");
+            var existing = await db.Classes.Where(c => classIds.Contains(c.Id)).CountAsync(ct);
+            if (existing != classIds.Count) throw new ValidationException("One or more classes do not exist.");
+        }
+        else if (classIds.Count > 0)
+        {
+            throw new ValidationException("Class assignments are only valid for a class teacher.");
+        }
 
         if (await db.SchoolUsers.IgnoreQueryFilters().AnyAsync(u => u.Email == email, ct))
             throw new ConflictException("A user with this email already exists.");
@@ -36,7 +48,7 @@ public sealed class InviteService(
             throw new ConflictException("An active invitation for this email already exists.");
 
         var raw = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
-        var invite = new Invite(schoolId, email, role, Sha256(raw), clock.UtcNow.AddHours(_options.InviteTtlHours), tenant.UserEmail);
+        var invite = new Invite(schoolId, email, role, Sha256(raw), clock.UtcNow.AddHours(_options.InviteTtlHours), tenant.UserEmail, classIds);
         db.Invites.Add(invite);
         await db.SaveChangesAsync(ct);
 
@@ -64,8 +76,11 @@ public sealed class InviteService(
             throw new ConflictException("A user with this email already exists.");
 
         var user = new SchoolUser(invite.SchoolId, invite.Email, hasher.Hash(password), invite.Role);
-        invite.Accept(clock.UtcNow);
         db.SchoolUsers.Add(user);
+        // Materialize class assignments for a class teacher.
+        foreach (var classId in invite.ClassIds())
+            db.SchoolUserClasses.Add(new SchoolUserClass(invite.SchoolId, user.Id, classId));
+        invite.Accept(clock.UtcNow);
         await db.SaveChangesAsync(ct);
         return user;
     }

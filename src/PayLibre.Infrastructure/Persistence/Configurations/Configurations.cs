@@ -53,9 +53,24 @@ public sealed class InviteConfiguration : IEntityTypeConfiguration<Invite>
         b.Property(x => x.Role).HasConversion<string>().HasMaxLength(16).IsRequired();
         b.Property(x => x.TokenHash).HasMaxLength(100).IsRequired();
         b.Property(x => x.InvitedByEmail).HasMaxLength(320);
+        b.Property(x => x.ClassIdsCsv).HasMaxLength(2000);
         b.HasIndex(x => x.TokenHash);
         b.HasIndex(x => new { x.SchoolId, x.Email });
         b.HasOne<School>().WithMany().HasForeignKey(x => x.SchoolId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public sealed class SchoolUserClassConfiguration : IEntityTypeConfiguration<SchoolUserClass>
+{
+    public void Configure(EntityTypeBuilder<SchoolUserClass> b)
+    {
+        b.ToTable("school_user_classes");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => x.SchoolUserId);
+        b.HasIndex(x => new { x.SchoolUserId, x.ClassId }).IsUnique();
+        b.HasOne<School>().WithMany().HasForeignKey(x => x.SchoolId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne<SchoolUser>().WithMany().HasForeignKey(x => x.SchoolUserId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne<PayLibre.Domain.Enrolment.Class>().WithMany().HasForeignKey(x => x.ClassId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
