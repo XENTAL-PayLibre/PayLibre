@@ -15,6 +15,8 @@ public sealed record DashboardOverview(
 
 public sealed record OutstandingRow(Guid StudentId, string StudentName, string AdmissionNo, string ClassName, long OutstandingKobo);
 public sealed record ClassCollection(Guid ClassId, string ClassName, long InvoicedKobo, long CollectedKobo, long OutstandingKobo);
+public sealed record TrendPoint(string Month, long CollectedKobo, int Payments);
+public sealed record CollectionTrends(IReadOnlyList<TrendPoint> Series, long ForecastNextMonthKobo);
 
 /// <summary>Dashboard aggregation + collection reports for a school (tenant-scoped).</summary>
 public sealed class DashboardService(IApplicationDbContext db, ITenantContext tenant, IClock clock)
@@ -78,6 +80,31 @@ public sealed class DashboardService(IApplicationDbContext db, ITenantContext te
                 g.Sum(x => x.AmountKobo), g.Sum(x => x.AmountPaidKobo),
                 Math.Max(0, g.Sum(x => x.AmountKobo) - g.Sum(x => x.AmountPaidKobo))))
             .OrderBy(c => c.ClassName).ToList();
+    }
+
+    /// <summary>Monthly collection trend over the last <paramref name="months"/> months + a simple
+    /// next-month forecast (average of the last up-to-3 months).</summary>
+    public async Task<CollectionTrends> GetTrendsAsync(int months = 12, CancellationToken ct = default)
+    {
+        _ = tenant.RequireTenantId();
+        months = Math.Clamp(months, 1, 24);
+        var payments = await db.Payments.AsNoTracking().ToListAsync(ct);
+        var byMonth = payments
+            .GroupBy(p => new DateTime(p.OccurredAtUtc.Year, p.OccurredAtUtc.Month, 1))
+            .ToDictionary(g => g.Key, g => (Sum: g.Sum(x => x.AmountKobo), Count: g.Count()));
+
+        var now = clock.UtcNow;
+        var start = new DateTime(now.Year, now.Month, 1).AddMonths(-(months - 1));
+        var series = new List<TrendPoint>();
+        for (var i = 0; i < months; i++)
+        {
+            var m = start.AddMonths(i);
+            var v = byMonth.GetValueOrDefault(m);
+            series.Add(new TrendPoint(m.ToString("yyyy-MM", CultureInfo.InvariantCulture), v.Sum, v.Count));
+        }
+        var tail = series.TakeLast(3).Select(s => s.CollectedKobo).ToList();
+        var forecast = tail.Count > 0 ? tail.Sum() / tail.Count : 0;
+        return new CollectionTrends(series, forecast);
     }
 
     private static List<RevenuePoint> BuildRevenueSeries(IEnumerable<Domain.Payments.Payment> payments, DateTimeOffset now, int months)

@@ -50,5 +50,12 @@ public class DashboardServiceTests
         overview.Payments.Should().Be(1);
         overview.Recent.Should().ContainSingle().Which.StudentName.Should().Be("Ada");
         overview.RevenueSeries.Should().HaveCount(6);
+
+        // Trends: 12-month window, the payment lands in the current month, and the forecast reflects it.
+        var trends = await new DashboardService(check, db.Tenant, db.Clock).GetTrendsAsync(12);
+        trends.Series.Should().HaveCount(12);
+        trends.Series[^1].CollectedKobo.Should().Be(15_000);   // current month
+        trends.Series[^1].Payments.Should().Be(1);
+        trends.ForecastNextMonthKobo.Should().BeGreaterThan(0);
     }
 }
