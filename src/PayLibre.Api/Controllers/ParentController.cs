@@ -129,6 +129,23 @@ public sealed class ParentController(ParentAuthService auth, ParentService paren
         return Created($"/api/v1/disputes/{d.Id}", new { d.Id, status = d.Status.ToString() });
     }
 
+    /// <summary>Export all data held for your account (children + payment history). Data portability.</summary>
+    [HttpGet("me/export")]
+    [Authorize(Policy = AuthPolicies.Parent)]
+    [ProducesResponseType(typeof(ParentDataExport), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ParentDataExport>> ExportMyData(CancellationToken ct) =>
+        Ok(await parents.ExportAsync(Email(), ct));
+
+    /// <summary>Permanently delete your parent account + sign-in codes (right to erasure).</summary>
+    [HttpDelete("me")]
+    [Authorize(Policy = AuthPolicies.Parent)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteMyAccount(CancellationToken ct)
+    {
+        await parents.DeleteAccountAsync(Email(), ct);
+        return NoContent();
+    }
+
     private string Email() =>
         User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value
         ?? throw new AuthenticationException("No parent identity on the request.");

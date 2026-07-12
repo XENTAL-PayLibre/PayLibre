@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using PayLibre.Application.Common.Exceptions;
 using PayLibre.Application.Common.Interfaces;
+using PayLibre.Domain.Auth;
 using PayLibre.Domain.Fees;
 
 namespace PayLibre.Application.Parents;
+
+/// <summary>All personal data held for a parent (GDPR/NDPR data-portability export).</summary>
+public sealed record ParentDataExport(string Email, IReadOnlyList<ParentChild> Children, IReadOnlyList<ParentPaymentRow> Payments);
 
 public sealed record ParentChild(
     Guid StudentId, string FullName, string AdmissionNo, string SchoolName, string ClassName,
@@ -86,6 +90,28 @@ public sealed class ParentService(IApplicationDbContext db)
         var payments = await db.Payments.IgnoreQueryFilters().Where(p => ids.Contains(p.StudentId)).ToListAsync(ct);
         return payments.OrderByDescending(p => p.OccurredAtUtc)
             .Select(p => new ParentPaymentRow(p.Id, students.GetValueOrDefault(p.StudentId, "—"), p.AmountKobo, p.OccurredAtUtc)).ToList();
+    }
+
+    /// <summary>Export everything held for this parent (their profile is added by the caller): the
+    /// children they're linked to and their payment history. Data portability (GDPR/NDPR).</summary>
+    public async Task<ParentDataExport> ExportAsync(string parentEmail, CancellationToken ct = default)
+    {
+        var email = Norm(parentEmail);
+        var children = await GetChildrenAsync(email, ct);
+        var payments = await GetPaymentsAsync(email, ct);
+        return new ParentDataExport(email, children, payments);
+    }
+
+    /// <summary>Erase the parent's account + sign-in codes (right to erasure). Student records belong to
+    /// the school and are not deleted, but the account can no longer sign in.</summary>
+    public async Task DeleteAccountAsync(string parentEmail, CancellationToken ct = default)
+    {
+        var email = Norm(parentEmail);
+        var parent = await db.Parents.FirstOrDefaultAsync(p => p.Email == email, ct);
+        if (parent is not null) db.Parents.Remove(parent);
+        var otps = await db.LoginOtps.Where(o => o.Email == email && o.Subject == OtpSubject.Parent).ToListAsync(ct);
+        if (otps.Count > 0) db.LoginOtps.RemoveRange(otps);
+        await db.SaveChangesAsync(ct);
     }
 
     /// <summary>A receipt for one of the parent's children's payments (parent must own the student).</summary>

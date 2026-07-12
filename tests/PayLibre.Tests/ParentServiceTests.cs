@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PayLibre.Application.Authentication;
 using PayLibre.Application.Common;
@@ -91,6 +92,26 @@ public class ParentServiceTests
         await using var ctx = db.CreateContext();
         var act = () => new ParentService(ctx).GetPaymentDetailsAsync("stranger@x.com", studentId);
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Parent_can_export_data_then_delete_account()
+    {
+        using var db = new TestDb();
+        await SeedChildWithFeeAsync(db, new FakeXentalClient()); // guardian mum@x.com
+        db.Tenant.TenantId = null;
+        await using (var ctx = db.CreateContext()) await AuthSvc(db, ctx).RegisterAsync(Guardian, "password1", "Mum", "0800");
+
+        await using (var ctx = db.CreateContext())
+        {
+            var export = await new ParentService(ctx).ExportAsync(Guardian);
+            export.Email.Should().Be(Guardian);
+            export.Children.Should().ContainSingle().Which.FullName.Should().Be("Ada");
+        }
+
+        await using (var ctx = db.CreateContext()) await new ParentService(ctx).DeleteAccountAsync(Guardian);
+        await using (var ctx = db.CreateContext())
+            (await ctx.Parents.AnyAsync(p => p.Email == Guardian)).Should().BeFalse();
     }
 
     [Fact]
