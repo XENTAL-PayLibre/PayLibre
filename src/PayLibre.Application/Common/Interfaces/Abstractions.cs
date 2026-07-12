@@ -22,6 +22,7 @@ public interface IApplicationDbContext
     DbSet<StudentFee> StudentFees { get; }
     DbSet<Payment> Payments { get; }
     DbSet<FeeAllocation> FeeAllocations { get; }
+    DbSet<WebhookEvent> WebhookEvents { get; }
     DbSet<Parent> Parents { get; }
     DbSet<LoginOtp> LoginOtps { get; }
 
@@ -73,4 +74,11 @@ public interface INotificationSender
 
     /// <summary>Email a one-time sign-in code (2-step login).</summary>
     Task SendLoginCodeAsync(string toEmail, string code, CancellationToken ct = default);
+
+    /// <summary>Send a payment receipt (email + SMS) to a student's guardian after a deposit is reconciled.
+    /// All amounts in kobo.</summary>
+    Task SendPaymentReceiptAsync(
+        string toName, string? email, string? phone, string studentName,
+        long amountKobo, int invoicesSettled, long outstandingKobo, DateTimeOffset occurredAtUtc,
+        CancellationToken ct = default);
 }

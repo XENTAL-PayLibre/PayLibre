@@ -46,7 +46,7 @@ public class ReconciliationServiceTests
         return accountRef;
     }
 
-    private static ReconciliationService Recon(TestDb db, PayLibre.Infrastructure.Persistence.PayLibreDbContext ctx) => new(ctx, db.Clock);
+    private static ReconciliationService Recon(TestDb db, PayLibre.Infrastructure.Persistence.PayLibreDbContext ctx) => new(ctx, db.Clock, new FakeNotificationSender());
 
     [Fact]
     public async Task Deposit_is_attributed_oldest_due_first()

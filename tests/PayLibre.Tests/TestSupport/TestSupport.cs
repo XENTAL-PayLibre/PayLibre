@@ -86,6 +86,21 @@ public sealed class FakeNotificationSender : INotificationSender
     public string? LastLoginCode { get; private set; }
     public Task SendLoginCodeAsync(string toEmail, string code, CancellationToken ct = default)
     { LoginCodes++; LastLoginCode = code; return Task.CompletedTask; }
+
+    public int Receipts { get; private set; }
+    public long LastReceiptAmountKobo { get; private set; }
+    public long LastReceiptOutstandingKobo { get; private set; }
+    public string? LastReceiptEmail { get; private set; }
+    public Task SendPaymentReceiptAsync(
+        string toName, string? email, string? phone, string studentName,
+        long amountKobo, int invoicesSettled, long outstandingKobo, DateTimeOffset occurredAtUtc, CancellationToken ct = default)
+    {
+        Receipts++;
+        LastReceiptAmountKobo = amountKobo;
+        LastReceiptOutstandingKobo = outstandingKobo;
+        LastReceiptEmail = email;
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>SQLite in-memory database shared across contexts for one test.</summary>

@@ -19,5 +19,9 @@ public sealed class XentalOptions
     /// When empty, signature verification is skipped (log-only) — set it in real environments.</summary>
     public string WebhookSecret { get; set; } = string.Empty;
 
+    /// <summary>Operator secret for replaying stored webhook events (header <c>x-replay-secret</c>) — used
+    /// to reprocess dead-lettered events. When empty, the replay endpoint is disabled (returns 404).</summary>
+    public string ReplaySecret { get; set; } = string.Empty;
+
     public bool IsConfigured => !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
 }

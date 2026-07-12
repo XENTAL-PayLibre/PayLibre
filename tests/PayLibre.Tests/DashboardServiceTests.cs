@@ -38,7 +38,7 @@ public class DashboardServiceTests
         await using (var ctx = db.CreateContext())
             await new FeeService(ctx, db.Tenant, db.Clock).CreateAsync(new FeeSpec("Tuition", catId, classId, null, "First", 40_000, Due));
         await using (var ctx = db.CreateContext())
-            await new ReconciliationService(ctx, db.Clock).ProcessDepositAsync(accountRef, 15_000, 14_800, "n-1", "Parent", db.Clock.UtcNow);
+            await new ReconciliationService(ctx, db.Clock, new FakeNotificationSender()).ProcessDepositAsync(accountRef, 15_000, 14_800, "n-1", "Parent", db.Clock.UtcNow);
 
         await using var check = db.CreateContext();
         var overview = await new DashboardService(check, db.Tenant, db.Clock).GetOverviewAsync();

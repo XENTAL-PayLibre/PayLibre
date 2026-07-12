@@ -27,6 +27,7 @@ public sealed class PayLibreDbContext(
     public DbSet<PayLibre.Domain.Fees.StudentFee> StudentFees => Set<PayLibre.Domain.Fees.StudentFee>();
     public DbSet<PayLibre.Domain.Payments.Payment> Payments => Set<PayLibre.Domain.Payments.Payment>();
     public DbSet<PayLibre.Domain.Payments.FeeAllocation> FeeAllocations => Set<PayLibre.Domain.Payments.FeeAllocation>();
+    public DbSet<PayLibre.Domain.Payments.WebhookEvent> WebhookEvents => Set<PayLibre.Domain.Payments.WebhookEvent>();
     public DbSet<PayLibre.Domain.Parents.Parent> Parents => Set<PayLibre.Domain.Parents.Parent>();
 
     // Evaluated per query against the current request's tenant. Guid.Empty (no tenant) matches no

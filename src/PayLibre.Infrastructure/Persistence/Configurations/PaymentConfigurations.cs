@@ -23,6 +23,24 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
     }
 }
 
+public sealed class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
+{
+    public void Configure(EntityTypeBuilder<WebhookEvent> b)
+    {
+        b.ToTable("webhook_events");                 // platform-global (no tenant filter)
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Provider).HasMaxLength(40).IsRequired();
+        b.Property(x => x.EventType).HasMaxLength(80);
+        b.Property(x => x.Reference).HasMaxLength(100);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+        b.Property(x => x.Detail).HasMaxLength(1000);
+        b.Property(x => x.Payload).IsRequired();
+        b.Property(x => x.ReceivedAtUtc).IsRequired();
+        b.HasIndex(x => x.Reference);
+        b.HasIndex(x => x.Status);                    // operators query the dead-letter (Status = Failed)
+    }
+}
+
 public sealed class FeeAllocationConfiguration : IEntityTypeConfiguration<FeeAllocation>
 {
     public void Configure(EntityTypeBuilder<FeeAllocation> b)

@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,13 +13,14 @@ namespace PayLibre.Api.Controllers;
 /// Inbound webhook from Xental (PayLibre's only external dependency). Receives
 /// <c>deposit.reconciled</c> events, verifies the HMAC-SHA256 signature (<c>x-xental-signature</c>
 /// over the raw body), and applies each deposit to the student's outstanding fees (oldest-due-first).
+/// Every authentic event is recorded (audit trail); failures are dead-lettered for replay.
 /// </summary>
 [ApiController]
 [Route("api/v1/webhooks")]
 [AllowAnonymous]
 [EnableRateLimiting("webhook")]
 public sealed class WebhooksController(
-    ReconciliationService reconciliation,
+    WebhookService webhooks,
     IOptions<XentalOptions> xental,
     ILogger<WebhooksController> logger) : ControllerBase
 {
@@ -34,6 +34,7 @@ public sealed class WebhooksController(
         var raw = await reader.ReadToEndAsync(ct);
 
         var secret = xental.Value.WebhookSecret;
+        var signatureVerified = false;
         if (!string.IsNullOrWhiteSpace(secret))
         {
             var provided = Request.Headers["x-xental-signature"].FirstOrDefault() ?? string.Empty;
@@ -41,30 +42,37 @@ public sealed class WebhooksController(
                 HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
             if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(provided), Encoding.UTF8.GetBytes(expected)))
                 return Unauthorized(new { error = "Invalid signature." });
+            signatureVerified = true;
         }
         else
         {
             logger.LogWarning("Xental webhook secret not configured — skipping signature verification.");
         }
 
-        JsonElement root;
-        try { using var doc = JsonDocument.Parse(raw); root = doc.RootElement.Clone(); }
-        catch { return Ok(); } // malformed body — ack so Xental doesn't retry forever
+        var result = await webhooks.IngestXentalAsync(raw, signatureVerified, ct);
+        logger.LogInformation("Xental webhook {EventId}: {Status} ({Detail})", result.EventId, result.Status, result.Detail);
+        return Ok(new { eventId = result.EventId, status = result.Status.ToString() });
+    }
 
-        var evt = root.TryGetProperty("event", out var e) ? e.GetString() : null;
-        if (evt != "deposit.reconciled" || !root.TryGetProperty("data", out var data))
-            return Ok(); // ignore other event types
+    /// <summary>Operator-only: replay a stored webhook event (e.g. one that failed because the student
+    /// wasn't provisioned yet). Requires the <c>x-replay-secret</c> header; returns 404 when replay is
+    /// not configured. Idempotent — reconciliation won't double-apply a payment.</summary>
+    [HttpPost("xental/{eventId:guid}/replay")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Replay(Guid eventId, CancellationToken ct)
+    {
+        var replaySecret = xental.Value.ReplaySecret;
+        if (string.IsNullOrWhiteSpace(replaySecret)) return NotFound();
 
-        string? Str(string n) => data.TryGetProperty(n, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
-        long Num(string n) => data.TryGetProperty(n, out var v) && v.TryGetInt64(out var l) ? l : 0;
-        var occurred = data.TryGetProperty("occurredAt", out var o) && o.TryGetDateTimeOffset(out var d) ? d : DateTimeOffset.UtcNow;
+        var provided = Request.Headers["x-replay-secret"].FirstOrDefault() ?? string.Empty;
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(provided), Encoding.UTF8.GetBytes(replaySecret)))
+            return Unauthorized(new { error = "Invalid replay secret." });
 
-        var result = await reconciliation.ProcessDepositAsync(
-            Str("accountRef") ?? string.Empty, Num("amountKobo"), Num("netCreditKobo"),
-            Str("transactionRef") ?? string.Empty, Str("transferName"), occurred, ct);
-
-        logger.LogInformation("Xental deposit {Ref}: {Status} ({Settled} invoices, {Allocated} kobo)",
-            Str("transactionRef"), result.Status, result.InvoicesSettled, result.AllocatedKobo);
-        return Ok(new { result.Status });
+        var result = await webhooks.ReplayAsync(eventId, ct);
+        logger.LogInformation("Replayed webhook {EventId}: {Status} ({Detail})", result.EventId, result.Status, result.Detail);
+        return Ok(new { eventId = result.EventId, status = result.Status.ToString(), detail = result.Detail });
     }
 }

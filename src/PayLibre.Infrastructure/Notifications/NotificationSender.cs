@@ -52,6 +52,35 @@ public sealed class NotificationSender(
         await SendEmailAsync(toEmail, "Your PayLibre sign-in code", html, ct);
     }
 
+    public async Task SendPaymentReceiptAsync(
+        string toName, string? email, string? phone, string studentName,
+        long amountKobo, int invoicesSettled, long outstandingKobo, DateTimeOffset occurredAtUtc, CancellationToken ct = default)
+    {
+        string Naira(long kobo) => "₦" + (kobo / 100m).ToString("N2");
+        var when = occurredAtUtc.ToString("dd MMM yyyy, HH:mm 'UTC'");
+        var settledLine = invoicesSettled > 0
+            ? $"{invoicesSettled} fee{(invoicesSettled == 1 ? "" : "s")} fully paid."
+            : "Applied to outstanding fees.";
+        var outstandingLine = outstandingKobo > 0
+            ? $"Remaining balance: {Naira(outstandingKobo)}."
+            : "All fees are now paid — thank you!";
+        var text = $"Payment received for {studentName}: {Naira(amountKobo)} on {when}. {settledLine} {outstandingLine}";
+        var subject = $"Payment received for {studentName}";
+        var html = $"<p>Dear {toName},</p><p>We've received a payment for <b>{studentName}</b>.</p>"
+            + $"<table style=\"border-collapse:collapse\">"
+            + $"<tr><td style=\"padding:2px 12px 2px 0\">Amount</td><td><b>{Naira(amountKobo)}</b></td></tr>"
+            + $"<tr><td style=\"padding:2px 12px 2px 0\">Date</td><td>{when}</td></tr>"
+            + $"<tr><td style=\"padding:2px 12px 2px 0\">Fees settled</td><td>{invoicesSettled}</td></tr>"
+            + $"<tr><td style=\"padding:2px 12px 2px 0\">Outstanding</td><td>{Naira(outstandingKobo)}</td></tr>"
+            + $"</table><p>{outstandingLine}</p>";
+
+        logger.LogInformation("Payment receipt for {Student} -> {Email}/{Phone}: {Amount} kobo, {Settled} settled, {Outstanding} outstanding",
+            studentName, email ?? "-", phone ?? "-", amountKobo, invoicesSettled, outstandingKobo);
+
+        if (!string.IsNullOrWhiteSpace(email)) await SendEmailAsync(email!, subject, html, ct);
+        if (!string.IsNullOrWhiteSpace(phone)) await SendSmsAsync(phone!, text, ct);
+    }
+
     public async Task SendPasswordResetAsync(string toEmail, string resetUrl, CancellationToken ct = default)
     {
         var html = $"<p>Reset your PayLibre password using the link below (valid for a short time):</p>"

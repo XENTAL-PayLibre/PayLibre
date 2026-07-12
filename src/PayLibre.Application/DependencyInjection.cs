@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<Fees.FeeCategoryService>();
         services.AddScoped<Fees.FeeService>();
         services.AddScoped<Payments.ReconciliationService>();
+        services.AddScoped<Payments.WebhookService>();
         services.AddScoped<Payments.PaymentService>();
         services.AddScoped<Dashboard.DashboardService>();
         services.AddScoped<Parents.ParentAuthService>();
