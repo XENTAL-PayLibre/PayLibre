@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PayLibre.Api.Authorization;
 using PayLibre.Api.Contracts;
+using PayLibre.Application.Audit;
 using PayLibre.Application.Fees;
 
 namespace PayLibre.Api.Controllers;
@@ -13,7 +14,7 @@ namespace PayLibre.Api.Controllers;
 [ApiController]
 [Route("api/v1/fees")]
 [Authorize(Policy = AuthPolicies.Dashboard)]
-public sealed class FeesController(FeeService fees) : ControllerBase
+public sealed class FeesController(FeeService fees, AuditService audit) : ControllerBase
 {
     /// <summary>List fees with rolled-up invoiced/collected/outstanding figures.</summary>
     [HttpGet]
@@ -55,6 +56,8 @@ public sealed class FeesController(FeeService fees) : ControllerBase
     {
         var (fee, _) = await fees.CreateAsync(new FeeSpec(
             request.Name, request.FeeCategoryId, request.ClassId, request.Session, request.Term, request.AmountKobo, request.DueDateUtc), ct);
+        await audit.RecordAsync("fee.created", "Fee", fee.Id,
+            $"Created fee \"{fee.Name}\" ({fee.AmountKobo} kobo) due {fee.DueDateUtc:yyyy-MM-dd}.", ct);
         // Re-read via list to include category/class names + counts.
         var stats = (await fees.ListAsync(ct)).First(f => f.Fee.Id == fee.Id);
         return Created($"/api/v1/fees/{fee.Id}", ToResponse(stats));
@@ -67,6 +70,7 @@ public sealed class FeesController(FeeService fees) : ControllerBase
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await fees.DeleteAsync(id, ct);
+        await audit.RecordAsync("fee.deleted", "Fee", id, $"Deleted fee {id}.", ct);
         return NoContent();
     }
 

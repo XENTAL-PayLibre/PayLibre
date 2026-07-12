@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PayLibre.Api.Authorization;
 using PayLibre.Api.Contracts;
+using PayLibre.Application.Audit;
 using PayLibre.Application.Schools;
 using PayLibre.Domain.Schools;
 
@@ -14,7 +15,7 @@ namespace PayLibre.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/schools")]
-public sealed class SchoolsController(SchoolService schools) : ControllerBase
+public sealed class SchoolsController(SchoolService schools, AuditService audit) : ControllerBase
 {
     /// <summary>The current school (includes whether a payout account has been configured).</summary>
     [HttpGet("current")]
@@ -32,6 +33,8 @@ public sealed class SchoolsController(SchoolService schools) : ControllerBase
     public async Task<ActionResult<SchoolResponse>> UpdateSettlement(UpdateSettlementRequest request, CancellationToken ct)
     {
         var school = await schools.UpdateSettlementAsync(request.BankName, request.BankCode, request.AccountNumber, ct);
+        await audit.RecordAsync("settlement.updated", "School", school.Id,
+            $"Payout account set to {school.SettlementBankName} {school.SettlementAccountNumber} ({school.SettlementAccountName}).", ct);
         return Ok(ToSchool(school));
     }
 
@@ -44,6 +47,8 @@ public sealed class SchoolsController(SchoolService schools) : ControllerBase
     public async Task<ActionResult<SchoolResponse>> UpdateLateFees(UpdateLateFeesRequest request, CancellationToken ct)
     {
         var school = await schools.UpdateLateFeesAsync(request.LateFeeBps, request.GraceDays, ct);
+        await audit.RecordAsync("school.late_fees_updated", "School", school.Id,
+            $"Late fee set to {school.LateFeeBps} bps with a {school.LateFeeGraceDays}-day grace period.", ct);
         return Ok(ToSchool(school));
     }
 

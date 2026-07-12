@@ -68,6 +68,12 @@ public sealed record SelfEnrolRequest(
 
 public sealed record MeResponse(Guid UserId, string Email, string Role, SchoolResponse School);
 
+// ---- Audit trail ----
+/// <summary>One entry in the school's audit trail (who did what, when).</summary>
+public sealed record AuditEventResponse(
+    Guid Id, DateTimeOffset OccurredAtUtc, string? ActorEmail, string Action,
+    string? EntityType, Guid? EntityId, string Summary);
+
 // ---- Classes ----
 public sealed record ClassRequest(
     [Required, StringLength(80, MinimumLength = 1)] string Name,

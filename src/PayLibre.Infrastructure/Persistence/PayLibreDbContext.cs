@@ -28,6 +28,7 @@ public sealed class PayLibreDbContext(
     public DbSet<PayLibre.Domain.Payments.Payment> Payments => Set<PayLibre.Domain.Payments.Payment>();
     public DbSet<PayLibre.Domain.Payments.FeeAllocation> FeeAllocations => Set<PayLibre.Domain.Payments.FeeAllocation>();
     public DbSet<PayLibre.Domain.Payments.WebhookEvent> WebhookEvents => Set<PayLibre.Domain.Payments.WebhookEvent>();
+    public DbSet<PayLibre.Domain.Audit.AuditEvent> AuditEvents => Set<PayLibre.Domain.Audit.AuditEvent>();
     public DbSet<PayLibre.Domain.Parents.Parent> Parents => Set<PayLibre.Domain.Parents.Parent>();
 
     // Evaluated per query against the current request's tenant. Guid.Empty (no tenant) matches no
@@ -50,6 +51,7 @@ public sealed class PayLibreDbContext(
         modelBuilder.Entity<PayLibre.Domain.Fees.StudentFee>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<PayLibre.Domain.Payments.Payment>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
         modelBuilder.Entity<PayLibre.Domain.Payments.FeeAllocation>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
+        modelBuilder.Entity<PayLibre.Domain.Audit.AuditEvent>().HasQueryFilter(e => e.SchoolId == CurrentTenantId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

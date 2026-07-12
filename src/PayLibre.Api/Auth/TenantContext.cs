@@ -28,4 +28,8 @@ public sealed class TenantContext(IHttpContextAccessor accessor) : ITenantContex
             return Guid.TryParse(value, out var id) ? id : null;
         }
     }
+
+    public string? UserEmail =>
+        accessor.HttpContext?.User.FindFirst(ClaimTypes.Email)?.Value
+        ?? accessor.HttpContext?.User.FindFirst("email")?.Value;
 }

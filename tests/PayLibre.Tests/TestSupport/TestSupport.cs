@@ -16,6 +16,8 @@ public sealed class FakeTenantContext : ITenantContext
 {
     public Guid? TenantId { get; set; }
     public Guid RequireTenantId() => TenantId ?? throw new InvalidOperationException("No tenant set.");
+    public Guid? UserId { get; set; }
+    public string? UserEmail { get; set; }
 }
 
 /// <summary>Fast, deterministic password hasher for tests (no BCrypt cost).</summary>

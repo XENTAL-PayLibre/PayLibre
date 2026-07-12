@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PayLibre.Domain.Audit;
 using PayLibre.Domain.Auth;
 using PayLibre.Domain.Enrolment;
 using PayLibre.Domain.Fees;
@@ -23,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<Payment> Payments { get; }
     DbSet<FeeAllocation> FeeAllocations { get; }
     DbSet<WebhookEvent> WebhookEvents { get; }
+    DbSet<AuditEvent> AuditEvents { get; }
     DbSet<Parent> Parents { get; }
     DbSet<LoginOtp> LoginOtps { get; }
 
@@ -34,6 +36,12 @@ public interface ITenantContext
 {
     Guid? TenantId { get; }
     Guid RequireTenantId();
+
+    /// <summary>The current dashboard user's id, if authenticated (for audit attribution).</summary>
+    Guid? UserId { get; }
+
+    /// <summary>The current dashboard user's email, if present on the token (for audit attribution).</summary>
+    string? UserEmail { get; }
 }
 
 /// <summary>Testable wall clock.</summary>
