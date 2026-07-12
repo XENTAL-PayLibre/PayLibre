@@ -71,7 +71,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 return Task.CompletedTask;
             },
         };
-    });
+    })
+    // School public-API keys (X-Api-Key). Separate scheme; sets tenant_id so row-filtering applies.
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, PayLibre.Api.Auth.ApiKeyAuthenticationHandler>(
+        PayLibre.Api.Auth.ApiKeyAuthenticationHandler.SchemeName, _ => { });
 
 builder.Services.AddAuthorization(options =>
 {
@@ -90,6 +93,13 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Dashboard)
         .RequireClaim(AuthPolicies.RoleClaim, "Owner", "Admin", "Auditor"));
+    // Public-API scope policies (API-key scheme). Each requires the matching granted scope.
+    options.AddPolicy("api:students:read", p => p.AddAuthenticationSchemes(PayLibre.Api.Auth.ApiKeyAuthenticationHandler.SchemeName)
+        .RequireAuthenticatedUser().RequireClaim(PayLibre.Api.Auth.ApiKeyAuthenticationHandler.ScopeClaim, "students:read"));
+    options.AddPolicy("api:students:write", p => p.AddAuthenticationSchemes(PayLibre.Api.Auth.ApiKeyAuthenticationHandler.SchemeName)
+        .RequireAuthenticatedUser().RequireClaim(PayLibre.Api.Auth.ApiKeyAuthenticationHandler.ScopeClaim, "students:write"));
+    options.AddPolicy("api:payments:read", p => p.AddAuthenticationSchemes(PayLibre.Api.Auth.ApiKeyAuthenticationHandler.SchemeName)
+        .RequireAuthenticatedUser().RequireClaim(PayLibre.Api.Auth.ApiKeyAuthenticationHandler.ScopeClaim, "payments:read"));
     options.AddPolicy(AuthPolicies.Parent, policy => policy
         .RequireAuthenticatedUser()
         .RequireClaim(AuthPolicies.ScopeClaim, AuthPolicies.Parent));

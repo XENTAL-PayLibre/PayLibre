@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<Audit.AuditService>();
         services.AddScoped<SchoolService>();
         services.AddScoped<InviteService>();
+        services.AddScoped<ApiKeys.ApiKeyService>();
         services.AddScoped<ClassService>();
         services.AddScoped<StudentService>();
         services.AddScoped<SelfEnrolmentService>();

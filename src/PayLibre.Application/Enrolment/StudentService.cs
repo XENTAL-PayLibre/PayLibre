@@ -44,6 +44,35 @@ public sealed class StudentService(
             ?? throw new NotFoundException($"Student '{id}' not found.");
     }
 
+    /// <summary>Create or update a student keyed by admission number (public-API sync). New students are
+    /// provisioned a virtual account; existing ones are updated in place. Returns the student + whether created.</summary>
+    public async Task<(Student Student, bool Created)> UpsertByAdmissionNoAsync(StudentInput input, CancellationToken ct = default)
+    {
+        _ = tenant.RequireTenantId();
+        var admissionNo = (input.AdmissionNo ?? string.Empty).Trim();
+        if (admissionNo.Length == 0) throw new ValidationException("An admission number is required.");
+        var existing = await db.Students.FirstOrDefaultAsync(s => s.AdmissionNo == admissionNo, ct);
+        if (existing is null) return (await CreateAsync(input, ct), true);
+
+        var klass = await db.Classes.FirstOrDefaultAsync(c => c.Id == input.ClassId, ct)
+            ?? throw new ValidationException("The selected class does not exist.");
+        var session = string.IsNullOrWhiteSpace(input.Session) ? klass.Session : input.Session!.Trim();
+        existing.Update(input.FullName, klass.Id, session, input.GuardianName, input.GuardianPhone, input.GuardianEmail);
+        await db.SaveChangesAsync(ct);
+        return (existing, false);
+    }
+
+    /// <summary>A student (by admission number) plus their total outstanding fees (kobo).</summary>
+    public async Task<(Student Student, long OutstandingKobo)> GetWithOutstandingAsync(string admissionNo, CancellationToken ct = default)
+    {
+        _ = tenant.RequireTenantId();
+        admissionNo = (admissionNo ?? string.Empty).Trim();
+        var student = await db.Students.FirstOrDefaultAsync(s => s.AdmissionNo == admissionNo, ct)
+            ?? throw new NotFoundException($"Student '{admissionNo}' not found.");
+        var fees = await db.StudentFees.AsNoTracking().Where(f => f.StudentId == student.Id).ToListAsync(ct);
+        return (student, fees.Sum(f => f.OutstandingKobo));
+    }
+
     /// <summary>Term rollover: move the given students into a target class (+ session). Returns the count moved.</summary>
     public async Task<int> PromoteAsync(IReadOnlyList<Guid> studentIds, Guid toClassId, string? session, CancellationToken ct = default)
     {

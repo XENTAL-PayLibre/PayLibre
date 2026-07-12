@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PayLibre.Domain.ApiKeys;
 using PayLibre.Domain.Audit;
 using PayLibre.Domain.Auth;
 using PayLibre.Domain.Enrolment;
@@ -27,6 +28,7 @@ public interface IApplicationDbContext
     DbSet<RefundRequest> RefundRequests { get; }
     DbSet<WebhookEvent> WebhookEvents { get; }
     DbSet<AuditEvent> AuditEvents { get; }
+    DbSet<ApiKey> ApiKeys { get; }
     DbSet<Parent> Parents { get; }
     DbSet<LoginOtp> LoginOtps { get; }
 

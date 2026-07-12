@@ -68,6 +68,31 @@ public sealed record SelfEnrolRequest(
 
 public sealed record MeResponse(Guid UserId, string Email, string Role, SchoolResponse School);
 
+// ---- API keys ----
+/// <summary>Create a scoped API key. Scopes: students:read, students:write, payments:read.</summary>
+public sealed record CreateApiKeyRequest(
+    [Required, StringLength(120, MinimumLength = 1)] string Name,
+    [Required, MinLength(1)] string[] Scopes);
+public sealed record ApiKeyResponse(
+    Guid Id, string Name, string KeyPrefix, string Scopes, bool Active,
+    DateTimeOffset CreatedAtUtc, DateTimeOffset? LastUsedAtUtc, DateTimeOffset? RevokedAtUtc);
+/// <summary>Returned only once, at creation — the full key value is never shown again.</summary>
+public sealed record CreatedApiKeyResponse(ApiKeyResponse Key, string PlaintextKey);
+
+// ---- Public API (X-Api-Key) ----
+/// <summary>Create or update a student by admission number (idempotent sync from a school system).</summary>
+public sealed record PublicUpsertStudentRequest(
+    [Required, StringLength(64, MinimumLength = 1)] string AdmissionNo,
+    [Required, StringLength(200, MinimumLength = 1)] string FullName,
+    [Required] Guid ClassId,
+    [StringLength(40)] string? Session,
+    [Required, StringLength(200, MinimumLength = 1)] string GuardianName,
+    [StringLength(40)] string? GuardianPhone,
+    [EmailAddress] string? GuardianEmail);
+public sealed record PublicStudentResponse(
+    string AdmissionNo, string FullName, string Status, long OutstandingKobo,
+    string? Nuban, string? BankName, string? AccountName);
+
 // ---- Team / invites ----
 /// <summary>Invite a staff member. <c>Role</c> is one of Admin, Bursar, Accountant, Auditor (not Owner).</summary>
 public sealed record CreateInviteRequest(
