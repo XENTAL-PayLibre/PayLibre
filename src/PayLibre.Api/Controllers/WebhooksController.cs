@@ -34,22 +34,19 @@ public sealed class WebhooksController(
         var raw = await reader.ReadToEndAsync(ct);
 
         var secret = xental.Value.WebhookSecret;
-        var signatureVerified = false;
-        if (!string.IsNullOrWhiteSpace(secret))
+        if (string.IsNullOrWhiteSpace(secret))
         {
-            var provided = Request.Headers["x-xental-signature"].FirstOrDefault() ?? string.Empty;
-            var expected = Convert.ToHexString(
-                HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
-            if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(provided), Encoding.UTF8.GetBytes(expected)))
-                return Unauthorized(new { error = "Invalid signature." });
-            signatureVerified = true;
+            // Fail CLOSED: never process unsigned events. An unset secret is a misconfiguration, not a bypass.
+            logger.LogError("Xental webhook secret is not configured — refusing to process the event.");
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "Webhook verification not configured." });
         }
-        else
-        {
-            logger.LogWarning("Xental webhook secret not configured — skipping signature verification.");
-        }
+        var provided = Request.Headers["x-xental-signature"].FirstOrDefault() ?? string.Empty;
+        var expected = Convert.ToHexString(
+            HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(provided), Encoding.UTF8.GetBytes(expected)))
+            return Unauthorized(new { error = "Invalid signature." });
 
-        var result = await webhooks.IngestXentalAsync(raw, signatureVerified, ct);
+        var result = await webhooks.IngestXentalAsync(raw, signatureVerified: true, ct);
         logger.LogInformation("Xental webhook {EventId}: {Status} ({Detail})", result.EventId, result.Status, result.Detail);
         return Ok(new { eventId = result.EventId, status = result.Status.ToString() });
     }

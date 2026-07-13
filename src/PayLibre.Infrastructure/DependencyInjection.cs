@@ -38,6 +38,10 @@ public static class DependencyInjection
         services.AddHttpClient(); // used by the notification sender (Resend/Termii/Twilio) + outbound webhooks
         services.AddScoped<INotificationSender, NotificationSender>();
         services.AddScoped<IOutboundWebhookSender, Webhooks.OutboundWebhookSender>();
+        // Dedicated client for outbound webhooks: redirects disabled (SSRF hardening) + a send timeout.
+        services.AddHttpClient(Webhooks.OutboundWebhookSender.HttpClientName)
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
+            .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddScoped<IPushSender, Notifications.FcmPushSender>();
 
         // Xental integration — the only external dependency.

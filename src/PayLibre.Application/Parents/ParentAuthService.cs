@@ -58,7 +58,8 @@ public sealed class ParentAuthService(IApplicationDbContext db, IPasswordHasher 
             .OrderByDescending(o => o.CreatedAtUtc).FirstOrDefault();
         if (otp is null || !otp.IsRedeemable(clock.UtcNow))
             throw new AuthenticationException("Invalid or expired code. Please sign in again.");
-        if (Sha256(code ?? string.Empty) != otp.CodeHash)
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(Sha256(code ?? string.Empty)), Encoding.UTF8.GetBytes(otp.CodeHash)))
         {
             otp.RegisterFailedAttempt();
             await db.SaveChangesAsync(ct);

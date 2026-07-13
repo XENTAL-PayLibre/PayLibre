@@ -111,6 +111,8 @@ public sealed class ParentService(IApplicationDbContext db)
         if (parent is not null) db.Parents.Remove(parent);
         var otps = await db.LoginOtps.Where(o => o.Email == email && o.Subject == OtpSubject.Parent).ToListAsync(ct);
         if (otps.Count > 0) db.LoginOtps.RemoveRange(otps);
+        var devices = await db.DeviceTokens.Where(d => d.ParentEmail == email).ToListAsync(ct);
+        if (devices.Count > 0) db.DeviceTokens.RemoveRange(devices);
         await db.SaveChangesAsync(ct);
     }
 

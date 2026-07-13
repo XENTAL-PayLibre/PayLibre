@@ -88,6 +88,12 @@ public sealed class StudentService(
     public async Task<IReadOnlyList<StudentGuardian>> ListGuardiansAsync(Guid studentId, CancellationToken ct = default)
     {
         _ = tenant.RequireTenantId();
+        if (IsClassTeacher)
+        {
+            var student = await db.Students.AsNoTracking().FirstOrDefaultAsync(s => s.Id == studentId, ct);
+            if (student is null || !tenant.AssignedClassIds.Contains(student.ClassId))
+                throw new NotFoundException($"Student '{studentId}' not found.");
+        }
         return await db.StudentGuardians.AsNoTracking().Where(g => g.StudentId == studentId).ToListAsync(ct);
     }
 
@@ -144,8 +150,9 @@ public sealed class StudentService(
     public async Task<string> ExportCsvAsync(CancellationToken ct = default)
     {
         _ = tenant.RequireTenantId();
-        var students = (await db.Students.AsNoTracking().ToListAsync(ct))
-            .OrderBy(s => s.FullName).ToList();
+        var q = db.Students.AsNoTracking().AsQueryable();
+        if (IsClassTeacher) { var scope = tenant.AssignedClassIds; q = q.Where(s => scope.Contains(s.ClassId)); }
+        var students = (await q.ToListAsync(ct)).OrderBy(s => s.FullName).ToList();
         var classNames = await db.Classes.AsNoTracking().ToDictionaryAsync(c => c.Id, c => c.Name, ct);
 
         var sb = new System.Text.StringBuilder();
@@ -165,6 +172,8 @@ public sealed class StudentService(
     private static string Csv(string? v)
     {
         v ??= "";
+        // Neutralize spreadsheet formula injection: prefix values starting with a formula trigger.
+        if (v.Length > 0 && (v[0] is '=' or '+' or '-' or '@' or '\t' or '\r')) v = "'" + v;
         return v.Contains(',') || v.Contains('"') || v.Contains('\n')
             ? "\"" + v.Replace("\"", "\"\"") + "\""
             : v;

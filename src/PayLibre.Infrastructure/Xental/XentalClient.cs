@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -12,7 +13,8 @@ namespace PayLibre.Infrastructure.Xental;
 /// HTTP adapter for the Xental public API. Exchanges client credentials for a bearer token,
 /// caches it, and refreshes on expiry / a 401. This is the ONLY external service PayLibre talks to.
 /// </summary>
-public sealed class XentalClient(HttpClient http, IOptions<XentalOptions> options, IClock clock) : IXentalClient
+public sealed class XentalClient(HttpClient http, IOptions<XentalOptions> options, IClock clock,
+    Microsoft.Extensions.Logging.ILogger<XentalClient> logger) : IXentalClient
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly XentalOptions _options = options.Value;
@@ -108,7 +110,11 @@ public sealed class XentalClient(HttpClient http, IOptions<XentalOptions> option
 
         var payload = await response.Content.ReadAsStringAsync(ct);
         if (!response.IsSuccessStatusCode)
-            throw new UpstreamException($"Xental {method} {path} -> {(int)response.StatusCode}: {Truncate(payload)}");
+        {
+            // Log the upstream detail server-side; surface only a generic message to callers/clients.
+            logger.LogWarning("Xental {Method} {Path} -> {Status}: {Body}", method, path, (int)response.StatusCode, Truncate(payload));
+            throw new UpstreamException($"The payment provider returned an error ({(int)response.StatusCode}).");
+        }
         if (string.IsNullOrWhiteSpace(payload)) return default;
         using var doc = JsonDocument.Parse(payload);
         return doc.RootElement.Clone();

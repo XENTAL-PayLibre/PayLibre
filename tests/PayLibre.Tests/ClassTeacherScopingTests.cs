@@ -78,5 +78,19 @@ public class ClassTeacherScopingTests
             var act = () => new StudentService(ctx, db.Tenant, x, new FakeNotificationSender(), Opts).GetAsync(bobId);
             await act.Should().ThrowAsync<NotFoundException>();
         }
+
+        // Export is class-scoped too (no whole-school roster leak).
+        await using (var ctx = db.CreateContext())
+        {
+            var csv = await new StudentService(ctx, db.Tenant, x, new FakeNotificationSender(), Opts).ExportCsvAsync();
+            csv.Should().Contain("Ada").And.NotContain("Bob");
+        }
+
+        // Guardian listing for an out-of-class student is denied.
+        await using (var ctx = db.CreateContext())
+        {
+            var act = () => new StudentService(ctx, db.Tenant, x, new FakeNotificationSender(), Opts).ListGuardiansAsync(bobId);
+            await act.Should().ThrowAsync<NotFoundException>();
+        }
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using PayLibre.Application.Common.Interfaces;
 using PayLibre.Domain.Auth;
 using PayLibre.Domain.Common;
@@ -80,5 +81,26 @@ public sealed class PayLibreDbContext(
             else if (entry.State == EntityState.Modified) entry.Entity.UpdatedAtUtc = now;
         }
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RunSerializedAsync(long lockKey, Func<CancellationToken, Task> work, CancellationToken ct = default)
+    {
+        // SQLite (tests) has no advisory locks and no cross-connection concurrency — just run the work.
+        if (!Database.IsNpgsql()) { await work(ct); return; }
+
+        await using var tx = await Database.BeginTransactionAsync(ct);
+        var conn = Database.GetDbConnection();
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx.GetDbTransaction();
+            cmd.CommandText = "SELECT pg_advisory_xact_lock(@k)"; // released automatically at commit/rollback
+            var p = cmd.CreateParameter();
+            p.ParameterName = "k";
+            p.Value = lockKey;
+            cmd.Parameters.Add(p);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+        await work(ct);
+        await tx.CommitAsync(ct);
     }
 }

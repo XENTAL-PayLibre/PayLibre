@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,9 @@ public sealed class NotificationSender(
     private readonly ResendOptions _resend = resend.Value;
     private readonly SmsOptions _sms = sms.Value;
 
+    // HTML-encode any user-controlled value before embedding it in an email body (anti-injection).
+    private static string H(string? s) => WebUtility.HtmlEncode(s ?? string.Empty);
+
     public async Task SendVirtualAccountDetailsAsync(
         string toName, string? email, string? phone, string studentName,
         string nuban, string bankName, string accountName, CancellationToken ct = default)
@@ -27,7 +31,7 @@ public sealed class NotificationSender(
         var text = $"{studentName}'s PayLibre fee account: {bankName}, {nuban} ({accountName}). "
             + "Transfer school fees to this account — payments are tracked automatically.";
         var subject = $"Fee account for {studentName}";
-        var html = $"<p>Dear {toName},</p><p>{text}</p>";
+        var html = $"<p>Dear {H(toName)},</p><p>{H(text)}</p>";
 
         logger.LogInformation("Account details for {Student} -> {Email}/{Phone}: {Bank} {Nuban}",
             studentName, email ?? "-", phone ?? "-", bankName, nuban);
@@ -38,7 +42,7 @@ public sealed class NotificationSender(
 
     public async Task SendWelcomeAsync(string toEmail, string name, CancellationToken ct = default)
     {
-        var html = $"<p>Hi {name},</p><p>Welcome to PayLibre — your account is ready. "
+        var html = $"<p>Hi {H(name)},</p><p>Welcome to PayLibre — your account is ready. "
             + "You can now set up classes, students and fees, and start collecting school payments.</p>";
         logger.LogInformation("Welcome email for {Email}", toEmail);
         await SendEmailAsync(toEmail, "Welcome to PayLibre", html, ct);
@@ -66,7 +70,7 @@ public sealed class NotificationSender(
             : "All fees are now paid — thank you!";
         var text = $"Payment received for {studentName}: {Naira(amountKobo)} on {when}. {settledLine} {outstandingLine}";
         var subject = $"Payment received for {studentName}";
-        var html = $"<p>Dear {toName},</p><p>We've received a payment for <b>{studentName}</b>.</p>"
+        var html = $"<p>Dear {H(toName)},</p><p>We've received a payment for <b>{H(studentName)}</b>.</p>"
             + $"<table style=\"border-collapse:collapse\">"
             + $"<tr><td style=\"padding:2px 12px 2px 0\">Amount</td><td><b>{Naira(amountKobo)}</b></td></tr>"
             + $"<tr><td style=\"padding:2px 12px 2px 0\">Date</td><td>{when}</td></tr>"
@@ -92,7 +96,7 @@ public sealed class NotificationSender(
             : $"The fee \"{feeName}\" for {studentName} is due on {due}.";
         var text = $"{lead} Outstanding: {Naira(outstandingKobo)}. Please pay into the student's PayLibre account.";
         var subject = overdue ? $"Overdue fee for {studentName}" : $"Fee reminder for {studentName}";
-        var html = $"<p>Dear {toName},</p><p>{lead}</p>"
+        var html = $"<p>Dear {H(toName)},</p><p>{H(lead)}</p>"
             + $"<p>Outstanding balance: <b>{Naira(outstandingKobo)}</b>.</p>"
             + "<p>Please transfer into the student's PayLibre fee account — payments are applied automatically.</p>";
 
@@ -105,7 +109,7 @@ public sealed class NotificationSender(
 
     public async Task SendStaffInviteAsync(string toEmail, string schoolName, string role, string inviteUrl, CancellationToken ct = default)
     {
-        var html = $"<p>You've been invited to join <b>{schoolName}</b> on PayLibre as <b>{role}</b>.</p>"
+        var html = $"<p>You've been invited to join <b>{H(schoolName)}</b> on PayLibre as <b>{H(role)}</b>.</p>"
             + $"<p>Accept the invitation and set your password:</p><p><a href=\"{inviteUrl}\">{inviteUrl}</a></p>"
             + "<p>This link expires soon. If you weren't expecting this, ignore this email.</p>";
         logger.LogInformation("Staff invite for {Email} to {School} as {Role}", toEmail, schoolName, role);

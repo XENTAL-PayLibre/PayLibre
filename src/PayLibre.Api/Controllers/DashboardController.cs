@@ -64,6 +64,7 @@ public sealed class DashboardController(DashboardService dashboard) : Controller
     private static string Csv(string? v)
     {
         v ??= "";
+        if (v.Length > 0 && (v[0] is '=' or '+' or '-' or '@' or '\t' or '\r')) v = "'" + v; // formula-injection guard
         return v.Contains(',') || v.Contains('"') || v.Contains('\n') ? "\"" + v.Replace("\"", "\"\"") + "\"" : v;
     }
 }

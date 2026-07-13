@@ -43,6 +43,10 @@ builder.Services.AddScoped<AuthCookieWriter>();
 // JWT auth. The dashboard access token arrives as the HttpOnly `plb_access` cookie (or, for tooling,
 // an Authorization: Bearer header).
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+// Fail fast: never validate/sign with a missing or weak key. A short/empty key would otherwise let
+// forged tokens be accepted (a public constant), so refuse to start instead.
+if (Encoding.UTF8.GetByteCount(jwt.SigningKey ?? string.Empty) < 32)
+    throw new InvalidOperationException("Jwt:SigningKey must be set and at least 32 bytes. Configure the JWT_SIGNING_KEY secret.");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -56,8 +60,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidAudience = jwt.Audience,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                string.IsNullOrWhiteSpace(jwt.SigningKey) ? new string('0', 48) : jwt.SigningKey)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30),
         };
@@ -178,6 +181,20 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+// Behind Traefik (the only path to this container is the internal network), so trust the forwarded
+// client IP/proto — otherwise rate limiting + logging see Traefik's IP for every request. ForwardLimit=1
+// takes the proxy-appended (real) client IP even if a client spoofs X-Forwarded-For.
+var forwarded = new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+        | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto,
+    ForwardLimit = 1,
+};
+forwarded.KnownNetworks.Clear();
+forwarded.KnownProxies.Clear();
+app.UseForwardedHeaders(forwarded);
+
 app.UseSerilogRequestLogging();
 
 // Apply EF migrations on startup (Postgres only; tests use SQLite + EnsureCreated).
@@ -187,12 +204,16 @@ using (var scope = app.Services.CreateScope())
     if (db.Database.IsNpgsql()) db.Database.Migrate();
 }
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+// API docs are for development only — not exposed on the public production hosts.
+if (app.Environment.IsDevelopment())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "PayLibre API v1");
-    options.DocumentTitle = "PayLibre API";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "PayLibre API v1");
+        options.DocumentTitle = "PayLibre API";
+    });
+}
 
 var runningInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
 if (!runningInContainer) app.UseHttpsRedirection();

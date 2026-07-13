@@ -40,6 +40,12 @@ public interface IApplicationDbContext
     DbSet<LoginOtp> LoginOtps { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Run <paramref name="work"/> serialized against any other caller using the same
+    /// <paramref name="lockKey"/> — a Postgres transaction-scoped advisory lock, committed at the end.
+    /// On providers without advisory locks (SQLite in tests) it just runs the work. Use around
+    /// read-then-write money paths to prevent lost updates.</summary>
+    Task RunSerializedAsync(long lockKey, Func<CancellationToken, Task> work, CancellationToken ct = default);
 }
 
 /// <summary>Resolves the current tenant (school) from the authenticated request.</summary>

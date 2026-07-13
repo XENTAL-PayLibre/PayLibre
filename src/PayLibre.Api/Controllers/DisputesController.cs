@@ -19,6 +19,7 @@ public sealed class DisputesController(DisputeService disputes, AuditService aud
 {
     /// <summary>List disputes. <c>openOnly=true</c> (default) shows just the unresolved ones.</summary>
     [HttpGet]
+    [Authorize(Policy = AuthPolicies.StaffRead)] // exposes parent emails/payment refs — not for ClassTeacher
     [ProducesResponseType(typeof(IEnumerable<DisputeResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<DisputeResponse>>> List([FromQuery] bool openOnly = true, CancellationToken ct = default) =>
         Ok((await disputes.ListAsync(openOnly, ct)).Select(ToResponse));

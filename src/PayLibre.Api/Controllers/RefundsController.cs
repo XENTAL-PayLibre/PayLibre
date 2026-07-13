@@ -19,7 +19,7 @@ public sealed class RefundsController(RefundService refunds, AuditService audit)
 {
     /// <summary>List refund requests (most recent first).</summary>
     [HttpGet]
-    [Authorize(Policy = AuthPolicies.Dashboard)]
+    [Authorize(Policy = AuthPolicies.StaffRead)] // money data — not for ClassTeacher
     [ProducesResponseType(typeof(IEnumerable<RefundRequestResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<RefundRequestResponse>>> List(CancellationToken ct) =>
         Ok((await refunds.ListAsync(ct)).Select(ToResponse));

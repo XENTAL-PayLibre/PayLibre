@@ -50,7 +50,14 @@ public sealed class RefundRequest : BaseEntity, ITenantOwned
     public void Approve(Guid? approverUserId, string? approverEmail, DateTimeOffset now)
     {
         if (Status != RefundStatus.Requested) throw new DomainException("Only a pending refund can be approved.");
-        if (approverUserId is not null && approverUserId == RequestedByUserId)
+        // Dual control: the approver must be a known, different user than the requester. Reject when the
+        // approver identity is indeterminate, and match on email too (not just id).
+        if (approverUserId is null && string.IsNullOrWhiteSpace(approverEmail))
+            throw new DomainException("The approver's identity could not be determined.");
+        var sameUser = approverUserId is not null && approverUserId == RequestedByUserId;
+        var sameEmail = !string.IsNullOrWhiteSpace(approverEmail) && !string.IsNullOrWhiteSpace(RequestedByEmail)
+            && string.Equals(approverEmail.Trim(), RequestedByEmail, StringComparison.OrdinalIgnoreCase);
+        if (sameUser || sameEmail)
             throw new DomainException("A refund must be approved by a different user than the one who requested it.");
         Status = RefundStatus.Approved;
         Decide(approverUserId, approverEmail, null, now);

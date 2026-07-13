@@ -19,7 +19,7 @@ public sealed class SchoolsController(SchoolService schools, AuditService audit)
 {
     /// <summary>The current school (includes whether a payout account has been configured).</summary>
     [HttpGet("current")]
-    [Authorize(Policy = AuthPolicies.Dashboard)]
+    [Authorize(Policy = AuthPolicies.StaffRead)] // exposes payout account — not for ClassTeacher
     [ProducesResponseType(typeof(SchoolResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<SchoolResponse>> Current(CancellationToken ct) =>
         Ok(ToSchool(await schools.GetCurrentAsync(ct)));
@@ -27,7 +27,7 @@ public sealed class SchoolsController(SchoolService schools, AuditService audit)
     /// <summary>Settlement position at the payment provider — collected / settled / pending (net kobo) —
     /// plus the configured payout account.</summary>
     [HttpGet("settlement-report")]
-    [Authorize(Policy = AuthPolicies.Dashboard)]
+    [Authorize(Policy = AuthPolicies.StaffRead)] // payout bank + revenue — not for ClassTeacher
     [ProducesResponseType(typeof(SettlementReportResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<SettlementReportResponse>> SettlementReport(CancellationToken ct)
     {
