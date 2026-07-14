@@ -204,8 +204,12 @@ using (var scope = app.Services.CreateScope())
     if (db.Database.IsNpgsql()) db.Database.Migrate();
 }
 
-// API docs are for development only — not exposed on the public production hosts.
-if (app.Environment.IsDevelopment())
+// API docs are off by default so the public production hosts don't publish the API schema.
+// They are always on in Development, and can be turned on for a non-public host (e.g. staging)
+// by setting PAYLIBRE_ENABLE_API_DOCS=true. Production leaves it unset, so /swagger stays 404.
+var enableApiDocs = app.Environment.IsDevelopment()
+    || string.Equals(app.Configuration["PAYLIBRE_ENABLE_API_DOCS"], "true", StringComparison.OrdinalIgnoreCase);
+if (enableApiDocs)
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
